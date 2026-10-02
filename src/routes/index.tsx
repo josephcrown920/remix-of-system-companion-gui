@@ -88,6 +88,7 @@ function Editor() {
   const laneRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
+  const chatBox = useRef<HTMLDivElement>(null);
   const chatEnd = useRef<HTMLDivElement>(null);
 
   const duration = useMemo(() => Math.max(12, ...clips.map((c) => c.start + c.dur)), [clips]);
@@ -146,7 +147,10 @@ function Editor() {
     if (playing) void a.play().catch(() => {}); else a.pause();
   }, [playing, audioClip, playhead]);
 
-  useEffect(() => { chatEnd.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs, busy]);
+  useEffect(() => {
+    const box = chatBox.current;
+    if (box) box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
+  }, [msgs, busy]);
 
   /* ---------- media bin ---------- */
   async function ingest(files: FileList | null) {
@@ -603,7 +607,7 @@ function Editor() {
             <span className="text-xs font-semibold">{active.name}</span>
             <span className="truncate text-[11px] text-muted-foreground">{active.role}</span>
           </div>
-          <div className="max-h-[300px] flex-1 space-y-3 overflow-y-auto p-3">
+          <div ref={chatBox} className="max-h-[300px] flex-1 space-y-3 overflow-y-auto p-3">
             {msgs.map((m, i) => (
               <div key={i} className={cn("animate-rise text-sm leading-relaxed", m.role === "user" ? "ml-auto max-w-[85%] rounded-lg rounded-br-sm bg-primary/90 px-3.5 py-2 text-primary-foreground" : "max-w-[92%]")}>
                 <p>{m.text}</p>
