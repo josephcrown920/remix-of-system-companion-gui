@@ -360,24 +360,29 @@ function Editor() {
   const audioAsset = audioClip ? assetOf(audioClip.assetId) : null;
 
   return (
-    <div className="flex min-h-screen flex-col bg-background font-sans text-foreground">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
       {/* top bar */}
-      <header className="flex items-center justify-between gap-2 border-b border-border px-3 py-2.5">
+      <header className="sticky top-0 z-50 flex h-12 items-center justify-between gap-2 border-b border-border bg-card/75 px-3 backdrop-blur-2xl sm:px-4">
         <div className="flex items-center gap-2">
-          <div className="grid size-7 place-items-center rounded-lg bg-primary text-primary-foreground"><Clapperboard className="size-4" /></div>
-          <span className="font-display text-base font-bold tracking-tight">Reel</span>
-          <span className="hidden rounded-full bg-secondary px-2 py-0.5 font-mono text-[10px] uppercase text-muted-foreground sm:inline">Semantic editor 1.1</span>
+          <span className="flex items-center gap-1.5" aria-hidden="true">
+            <i className="size-2.5 rounded-full bg-destructive" />
+            <i className="size-2.5 rounded-full bg-chart-5" />
+            <i className="size-2.5 rounded-full bg-chart-3" />
+          </span>
+          <div className="ml-1 grid size-6 place-items-center rounded-md glass-control text-primary"><Clapperboard className="size-3.5" /></div>
+          <span className="font-display text-sm font-bold">REEL</span>
+          <span className="hidden font-mono text-[9px] uppercase text-muted-foreground md:inline">AI creative studio</span>
         </div>
         <div className="flex items-center gap-2">
-          <div className="flex rounded-full border border-border p-0.5 text-[11px]">
-            <button onClick={() => setMode("edit")} className={cn("rounded-full px-2.5 py-1 transition", mode === "edit" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Editor</button>
-            <button onClick={() => setMode("canvas")} className={cn("rounded-full px-2.5 py-1 transition", mode === "canvas" ? "bg-primary text-primary-foreground" : "text-muted-foreground")}>Canvas</button>
+          <div className="flex rounded-lg border border-border glass-control p-0.5 text-[11px]">
+            <button onClick={() => setMode("edit")} className={cn("rounded-md px-2.5 py-1 transition", mode === "edit" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Editor</button>
+            <button onClick={() => setMode("canvas")} className={cn("rounded-md px-2.5 py-1 transition", mode === "canvas" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Canvas</button>
           </div>
-          <button onClick={() => void exportVideo()} disabled={exporting || !clips.length} className="flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-40">
+          <button onClick={() => void exportVideo()} disabled={exporting || !clips.length} className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40">
             {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
             {exporting ? `${Math.round(exportPct * 100)}%` : "Export"}
           </button>
-          <button onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-2 rounded-full border border-border bg-card px-2.5 py-1.5 text-xs transition hover:border-primary">
+          <button onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-2 rounded-md border border-border glass-control px-2.5 py-1.5 text-xs transition hover:border-primary">
             <span className="grid size-5 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground" style={{ background: active.accent }}>{active.short}</span>
             <span className="hidden font-medium sm:inline">{active.name}</span>
             <Sparkles className="size-3 text-muted-foreground" />
@@ -386,7 +391,7 @@ function Editor() {
       </header>
 
       {pickerOpen && (
-        <div className="animate-rise border-b border-border bg-card p-3">
+        <div className="animate-rise border-b border-border glass-panel p-3">
           <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Choose your co-editor</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {AGENTS.map((a) => (
@@ -394,7 +399,7 @@ function Editor() {
                 key={a.id}
                 disabled={!a.available}
                 onClick={() => { setAgent(a.id); setPickerOpen(false); setMsgs((m) => [...m, { role: "assistant", agent: a.id, text: `${a.name} here — ${a.role.toLowerCase()}. Where do you want to take this cut?` }]); }}
-                className={cn("flex items-center gap-2.5 rounded-xl border p-2.5 text-left transition", a.id === agent ? "border-primary bg-primary/10" : "border-border hover:border-muted-foreground", !a.available && "opacity-40")}
+                className={cn("flex items-center gap-2.5 rounded-lg border p-2.5 text-left transition", a.id === agent ? "border-primary bg-primary/10" : "border-border glass-control hover:border-muted-foreground", !a.available && "opacity-40")}
               >
                 <span className="grid size-7 shrink-0 place-items-center rounded-lg font-mono text-[10px] font-bold text-primary-foreground" style={{ background: a.accent }}>{a.short}</span>
                 <span className="min-w-0">
@@ -408,13 +413,13 @@ function Editor() {
       )}
 
       {mode === "canvas" ? (
-        <main className="flex-1 p-3">
+        <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
         </main>
       ) : (
-      <main className="grid flex-1 gap-3 p-3 lg:grid-cols-[280px_1fr_240px]">
+      <main className="grid flex-1 gap-2 p-2 sm:gap-3 sm:p-3 lg:grid-cols-[260px_minmax(0,1fr)_290px] lg:grid-rows-[minmax(320px,1fr)_minmax(260px,0.8fr)]">
         {/* media bin */}
-        <section className="flex flex-col gap-2 rounded-xl border border-border bg-card p-3">
+        <section className="flex flex-col gap-2 rounded-lg border border-border glass-panel p-3 lg:row-span-2">
           <div className="flex items-center justify-between">
             <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Media bin</h2>
             <span className="font-mono text-[10px] text-muted-foreground">{assets.length}</span>
@@ -422,15 +427,15 @@ function Editor() {
           <label
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); void ingest(e.dataTransfer.files); }}
-            className="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-border py-4 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
+            className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border glass-control py-4 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
           >
             <Upload className="size-3.5" /> Drop footage, music or VO
             <input type="file" multiple accept="video/*,audio/*,image/*" className="hidden" onChange={(e) => void ingest(e.target.files)} />
           </label>
-          <button onClick={() => void generateBroll()} disabled={genBusy} className="flex items-center justify-center gap-2 rounded-lg bg-secondary py-2 text-xs font-medium transition hover:bg-muted disabled:opacity-50">
+          <button onClick={() => void generateBroll()} disabled={genBusy} className="flex items-center justify-center gap-2 rounded-md glass-control py-2 text-xs font-semibold transition hover:bg-muted disabled:opacity-50">
             {genBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />} Generate b-roll plate
           </button>
-          <div className="space-y-2 rounded-lg border border-border p-2">
+          <div className="space-y-2 rounded-md border border-border glass-control p-2">
             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Models</p>
             <select value={imgEngine} onChange={(e) => setImgEngine(e.target.value)} className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[11px]">
               {IMAGE_ENGINES.map((en) => <option key={en.id} value={en.id} disabled={!en.available}>{en.name}{en.available ? "" : " (unavailable)"}</option>)}
@@ -451,13 +456,13 @@ function Editor() {
                 {[24, 30, 60].map((f) => <option key={f} value={f}>{f}fps</option>)}
               </select>
             </div>
-            <button onClick={() => void generateClip()} disabled={genBusy} className="flex w-full items-center justify-center gap-2 rounded-lg bg-primary py-2 text-xs font-semibold text-primary-foreground transition hover:opacity-90 disabled:opacity-50">
+            <button onClick={() => void generateClip()} disabled={genBusy} className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-50">
               {genBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Film className="size-3.5" />} Generate video clip
             </button>
           </div>
           <div className="grid max-h-[220px] grid-cols-2 gap-2 overflow-y-auto lg:max-h-none lg:grid-cols-1">
             {assets.map((a) => (
-              <div key={a.id} className="group flex items-center gap-2 rounded-lg border border-border p-1.5">
+              <div key={a.id} className="group flex items-center gap-2 rounded-md border border-border glass-control p-1.5 transition hover:border-primary/50">
                 <div className="grid h-9 w-14 shrink-0 place-items-center overflow-hidden rounded bg-muted">
                   {a.kind === "audio" ? <Volume2 className="size-4 text-muted-foreground" /> : a.kind === "video"
                     ? <video src={a.url} muted className="h-full w-full object-cover" />
@@ -474,9 +479,9 @@ function Editor() {
         </section>
 
         {/* monitor + timeline */}
-        <section className="flex min-w-0 flex-col gap-3">
-          <div className="overflow-hidden rounded-xl border border-border bg-card">
-            <div className="relative grid aspect-video place-items-center bg-black">
+        <section className="flex min-w-0 flex-col gap-3 lg:row-span-2">
+          <div className="overflow-hidden rounded-lg border border-border glass-panel">
+            <div className="relative grid aspect-video place-items-center bg-background">
               {previewAsset && videoClip ? (
                 previewAsset.kind === "video" ? (
                   <video ref={videoRef} key={videoClip.id} src={previewAsset.url} playsInline className="h-full w-full object-contain" style={{ filter: FILTERS[videoClip.filter] ?? "none", opacity: videoClip.opacity }} />
@@ -505,7 +510,7 @@ function Editor() {
           </div>
 
           {/* timeline */}
-          <div className="flex min-h-[240px] flex-1 overflow-hidden rounded-xl border border-border bg-card">
+          <div className="flex min-h-[240px] flex-1 overflow-hidden rounded-lg border border-border glass-panel">
             <div className="w-16 shrink-0 border-r border-border">
               <div className="h-6 border-b border-border" />
               {TRACKS.map((t) => (
@@ -551,7 +556,7 @@ function Editor() {
         </section>
 
         {/* inspector */}
-        <section className="flex flex-col gap-3 rounded-xl border border-border bg-card p-3">
+        <section className="flex flex-col gap-3 rounded-lg border border-border glass-panel p-3 lg:min-h-0 lg:overflow-y-auto">
           <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Inspector</h2>
           {selected ? (
             <div className="space-y-3 text-xs">
@@ -592,7 +597,7 @@ function Editor() {
         </section>
 
         {/* chat co-editor */}
-        <section className="flex flex-col rounded-xl border border-border bg-card lg:col-span-3">
+        <section className="flex min-h-[300px] flex-col rounded-lg border border-border glass-panel lg:col-start-3 lg:row-start-2 lg:min-h-0">
           <div className="flex items-center gap-2 border-b border-border px-3 py-2">
             <span className="grid size-5 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground" style={{ background: active.accent }}>{active.short}</span>
             <span className="text-xs font-semibold">{active.name}</span>
@@ -600,7 +605,7 @@ function Editor() {
           </div>
           <div className="max-h-[300px] flex-1 space-y-3 overflow-y-auto p-3">
             {msgs.map((m, i) => (
-              <div key={i} className={cn("animate-rise text-sm leading-relaxed", m.role === "user" ? "ml-auto max-w-[85%] rounded-2xl rounded-br-sm bg-primary px-3.5 py-2 text-primary-foreground" : "max-w-[92%]")}>
+              <div key={i} className={cn("animate-rise text-sm leading-relaxed", m.role === "user" ? "ml-auto max-w-[85%] rounded-lg rounded-br-sm bg-primary/90 px-3.5 py-2 text-primary-foreground" : "max-w-[92%]")}>
                 <p>{m.text}</p>
                 {m.steps && m.steps.length > 0 && (
                   <ul className="mt-2 space-y-1 rounded-lg border border-border bg-muted/40 p-2 font-mono text-[10px] text-muted-foreground">
