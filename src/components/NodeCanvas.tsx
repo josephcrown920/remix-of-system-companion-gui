@@ -161,7 +161,7 @@ export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url:
   const center = (n: Node, side: "in" | "out") => ({ x: n.x + (side === "out" ? W : 0), y: n.y + 22 });
 
   return (
-    <div className="relative h-[70vh] min-h-[420px] overflow-hidden rounded-xl border border-border bg-background lg:h-[calc(100vh-120px)]">
+    <div className="relative h-[70vh] min-h-[420px] overflow-hidden rounded-lg border border-border glass-panel lg:h-[calc(100vh-120px)]">
       <div
         ref={wrap}
         onPointerDown={panStart}
@@ -185,7 +185,7 @@ export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url:
                 key={n.id}
                 data-node
                 ref={(el) => { if (el && heights.current[n.id] !== el.offsetHeight) { heights.current[n.id] = el.offsetHeight; } }}
-                className={cn("absolute rounded-xl border bg-card shadow-lg", linking === n.id ? "border-primary" : "border-border")}
+                className={cn("absolute rounded-lg border glass-panel shadow-lg", linking === n.id ? "border-primary" : "border-border")}
                 style={{ left: n.x, top: n.y, width: W }}
               >
                 <div onPointerDown={(e) => dragNode(e, n)} className="flex cursor-grab items-center gap-2 border-b border-border px-3 py-2 active:cursor-grabbing">
@@ -236,7 +236,7 @@ export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url:
         </div>
       </div>
       {linking && <p className="absolute left-1/2 top-3 -translate-x-1/2 rounded-full bg-primary px-3 py-1 text-[11px] font-medium text-primary-foreground">Now tap the input dot of another node</p>}
-      <div className="absolute bottom-3 left-1/2 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-xl border border-border bg-card/95 p-1 shadow-lg backdrop-blur">
+      <div className="absolute bottom-3 left-1/2 flex max-w-[calc(100%-24px)] -translate-x-1/2 items-center gap-1 overflow-x-auto rounded-lg border border-border glass-panel p-1 shadow-lg">
         {(Object.keys(META) as NodeType[]).map((t) => { const I = META[t].icon; return (
           <button key={t} onClick={() => addNode(t)} title={`Add ${META[t].label}`} className="flex shrink-0 items-center gap-1 rounded-lg px-2 py-1.5 text-[11px] hover:bg-secondary"><Plus className="size-3 text-primary" /><I className="size-3.5" /><span className="hidden sm:inline">{META[t].label.split(" ·")[0]}</span></button>
         ); })}
