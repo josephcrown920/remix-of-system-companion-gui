@@ -33,7 +33,7 @@ const START: { nodes: Node[]; edges: Edge[] } = {
   edges: [{ from: "p1", to: "i1" }, { from: "u1", to: "i1" }, { from: "i1", to: "v1" }, { from: "p2", to: "v1" }],
 };
 
-export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url: string, kind: "image" | "video", name: string) => void }) {
+export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url: string, kind: "image" | "video", name: string, addToTimeline?: boolean) => void }) {
   const [nodes, setNodes] = useState<Node[]>(START.nodes);
   const [edges, setEdges] = useState<Edge[]>(START.edges);
   const [view, setView] = useState({ x: 20, y: 20, z: 0.8 });
@@ -148,10 +148,12 @@ export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url:
         const src = image ? await urlToBlob(image) : undefined;
         const url = await generateImage(text, n.engine ?? DEFAULT_IMAGE_ENGINE, src);
         patch(n.id, { url, busy: false, status: undefined });
+        onAsset(url, "image", `image_${n.id}.png`, true);
       } else {
         const src = image ? await urlToBlob(image) : undefined;
         const url = await generateVideo(text, n.engine ?? DEFAULT_VIDEO_ENGINE, motionPhrase(motion), { image: src, onStatus: (s) => patch(n.id, { status: s }) });
         patch(n.id, { url, busy: false, status: undefined });
+        onAsset(url, "video", `video_${n.id}.mp4`, true);
       }
     } catch (e) {
       patch(n.id, { busy: false, status: undefined, error: e instanceof Error ? e.message : "Generation failed" });
@@ -225,7 +227,7 @@ export function NodeCanvas({ motion, onAsset }: { motion: Motion; onAsset: (url:
                         <button onClick={() => void run(n)} disabled={n.busy} className="flex flex-1 items-center justify-center gap-1 rounded-md bg-primary py-1.5 text-[11px] font-semibold text-primary-foreground disabled:opacity-50">
                           {n.busy ? <Loader2 className="size-3 animate-spin" /> : <Play className="size-3" />} Run
                         </button>
-                        <button onClick={() => n.url && onAsset(n.url, n.type as "image" | "video", `${n.type}_${n.id}`)} disabled={!n.url} className="flex items-center gap-1 rounded-md bg-secondary px-2 text-[11px] disabled:opacity-40"><FolderInput className="size-3" /> To bin</button>
+                         <button onClick={() => n.url && onAsset(n.url, n.type as "image" | "video", `${n.type}_${n.id}`, true)} disabled={!n.url} className="flex items-center gap-1 rounded-md bg-secondary px-2 text-[11px] disabled:opacity-40"><FolderInput className="size-3" /> Add again</button>
                       </div>
                     </>
                   )}
