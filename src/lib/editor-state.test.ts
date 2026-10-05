@@ -1,4 +1,5 @@
-import { describe, expect, test } from "vitest";
+import assert from "node:assert/strict";
+import { describe, test } from "node:test";
 import { clipForAsset, nextTrackStart, REQUIRED_ORCHESTRATOR_SPECIALISTS, serializableAssets, type EditorClip } from "./editor-state";
 
 const clips: EditorClip[] = [
@@ -8,18 +9,18 @@ const clips: EditorClip[] = [
 
 describe("editor session rules", () => {
   test("new visual generations are placed after the final V1 clip", () => {
-    expect(nextTrackStart(clips, "V1")).toBe(9);
-    expect(clipForAsset({ id: "g", name: "generated.png", kind: "image", url: "data:image/png;base64,x", dur: 4 }, clips, "new").start).toBe(9);
+    assert.equal(nextTrackStart(clips, "V1"), 9);
+    assert.equal(clipForAsset({ id: "g", name: "generated.png", kind: "image", url: "data:image/png;base64,x", dur: 4 }, clips, "new").start, 9);
   });
 
   test("temporary uploaded files are not written into saved sessions", () => {
-    expect(serializableAssets([
+    assert.deepEqual(serializableAssets([
       { id: "local", name: "local.mov", kind: "video", url: "blob:test", dur: 6 },
       { id: "generated", name: "generated.png", kind: "image", url: "data:image/png;base64,x", dur: 4 },
-    ]).map((asset) => asset.id)).toEqual(["generated"]);
+    ]).map((asset) => asset.id), ["generated"]);
   });
 
   test("orchestrator always routes to Astra, Codex, and Fable", () => {
-    expect(REQUIRED_ORCHESTRATOR_SPECIALISTS).toEqual(["astra", "codex", "fable"]);
+    assert.deepEqual(REQUIRED_ORCHESTRATOR_SPECIALISTS, ["astra", "codex", "fable"]);
   });
 });
