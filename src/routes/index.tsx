@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Clapperboard, Send, Loader2, Play, Pause, Scissors, MousePointer2, Upload, Plus, Trash2,
   ZoomIn, ZoomOut, Sparkles, Volume2, Eye, Gauge, Wand2, SkipBack, Download, Film,
+  Images, Save, FolderOpen, Bot, Layers3, CheckCircle2, CircleDashed, AlertCircle,
 } from "lucide-react";
 import { AGENTS, TRACKS, TRACK_LABEL, agentById, type AgentAction, type TrackId } from "@/lib/agents";
 import {
@@ -14,6 +15,7 @@ import { generateImage, generateVideo } from "@/lib/generate";
 import { renderTimeline, download } from "@/lib/export";
 import { NodeCanvas } from "@/components/NodeCanvas";
 import { cn } from "@/lib/utils";
+import { clipForAsset, serializableAssets, type EditorAsset, type EditorClip, type SavedSession } from "@/lib/editor-state";
 import scene1 from "@/assets/scene1.jpg";
 import scene2 from "@/assets/scene2.jpg";
 import scene3 from "@/assets/scene3.jpg";
@@ -33,12 +35,10 @@ export const Route = createFileRoute("/")({
 });
 
 type Kind = "video" | "image" | "audio";
-type Asset = { id: string; name: string; kind: Kind; url: string; dur: number };
-type Clip = {
-  id: string; assetId: string; track: TrackId; start: number; dur: number; inPoint: number;
-  name: string; volume: number; opacity: number; speed: number; filter: string;
-};
+type Asset = EditorAsset;
+type Clip = EditorClip;
 type Msg = { role: "user" | "assistant"; text: string; steps?: string[]; agent?: string };
+type CrewRun = { name: string; task: string; status: "queued" | "working" | "complete" | "skipped" | "failed" };
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 const tc = (s: number) => {
@@ -85,6 +85,11 @@ function Editor() {
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
   const [exporting, setExporting] = useState(false);
   const [exportPct, setExportPct] = useState(0);
+  const [mediaView, setMediaView] = useState<"media" | "generations">("media");
+  const [sideView, setSideView] = useState<"director" | "adjust">("director");
+  const [sessions, setSessions] = useState<SavedSession[]>([]);
+  const [sessionName, setSessionName] = useState("Untitled cut");
+  const [crew, setCrew] = useState<CrewRun[]>([]);
   const laneRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -152,6 +157,32 @@ function Editor() {
     if (box) box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
   }, [msgs, busy]);
 
+  useEffect(() => {
+    try {
+      const stored = window.localStorage.getItem("reel-editor-sessions");
+      if (stored) setSessions(JSON.parse(stored) as SavedSession[]);
+    } catch {
+      setSessions([]);
+    }
+  }, []);
+
+  function saveSession() {
+    const session: SavedSession = {
+      id: uid(), name: sessionName.trim() || "Untitled cut", updatedAt: new Date().toISOString(),
+      assets: serializableAssets(assets), clips, messages: msgs, agent, imageEngine: imgEngine, videoEngine: vidEngine,
+    };
+    const next = [session, ...sessions].slice(0, 12);
+    setSessions(next);
+    window.localStorage.setItem("reel-editor-sessions", JSON.stringify(next));
+  }
+
+  function openSession(id: string) {
+    const session = sessions.find((item) => item.id === id);
+    if (!session) return;
+    setSessionName(session.name); setAssets(session.assets); setClips(session.clips); setMsgs(session.messages);
+    setAgent(session.agent); setImgEngine(session.imageEngine); setVidEngine(session.videoEngine); setSel(null); setPlayhead(0);
+  }
+
   /* ---------- media bin ---------- */
   async function ingest(files: FileList | null) {
     if (!files) return;
@@ -179,9 +210,10 @@ function Editor() {
   }
 
   function addToTimeline(asset: Asset, track?: TrackId) {
-    const t: TrackId = track ?? (asset.kind === "audio" ? "A2" : "V1");
-    const end = clips.filter((c) => c.track === t).reduce((m, c) => Math.max(m, c.start + c.dur), 0);
-    setClips((cs) => [...cs, { id: uid(), assetId: asset.id, track: t, start: end, dur: asset.dur, inPoint: 0, name: asset.name.replace(/\.[^.]+$/, ""), volume: 1, opacity: 1, speed: 1, filter: "none" }]);
+    setClips((cs) => {
+      const clip = clipForAsset(asset, cs, uid());
+      return [...cs, track ? { ...clip, track, start: cs.filter((c) => c.track === track).reduce((end, c) => Math.max(end, c.start + c.dur), 0) } : clip];
+    });
   }
 
   async function generateBroll() {
@@ -189,9 +221,11 @@ function Editor() {
     setGenBusy(true);
     try {
       const url = await generateImage(p, imgEngine);
-      const a: Asset = { id: uid(), name: `gen_${uid()}.png`, kind: "image", url, dur: 4 };
+      const a: Asset = { id: uid(), name: `gen_${uid()}.png`, kind: "image", url, dur: 4, generated: true };
       setAssets((x) => [...x, a]);
-      setMsgs((m) => [...m, { role: "assistant", agent, text: "Generated a b-roll plate and dropped it in the bin.", steps: [`Generated "${p.slice(0, 48)}"`] }]);
+      addToTimeline(a, "V2");
+      setMediaView("generations");
+      setMsgs((m) => [...m, { role: "assistant", agent, text: "Generated a b-roll plate and placed it in your gallery and V2.", steps: [`Generated "${p.slice(0, 48)}"`] }]);
     } catch (e) {
       setMsgs((m) => [...m, { role: "assistant", agent, text: `Couldn't generate that plate — ${e instanceof Error ? e.message : "the AI service didn't return an image."}` }]);
     } finally {
@@ -204,9 +238,11 @@ function Editor() {
     setGenBusy(true);
     try {
       const url = await generateVideo(p, vidEngine, motionPhrase(motion), { onStatus: (s) => setMsgs((m) => [...m.slice(0, -1), { ...m[m.length - 1]!, text: `Rendering video… ${s}` }]) });
-      const a: Asset = { id: uid(), name: `clip_${uid()}.mp4`, kind: "video", url, dur: 6 };
+      const a: Asset = { id: uid(), name: `clip_${uid()}.mp4`, kind: "video", url, dur: 6, generated: true };
       setAssets((x) => [...x, a]);
-      setMsgs((m) => [...m, { role: "assistant", agent, text: "Rendered a video clip and dropped it in the bin.", steps: [`Motion: ${motionPhrase(motion)}`] }]);
+      addToTimeline(a, "V1");
+      setMediaView("generations");
+      setMsgs((m) => [...m, { role: "assistant", agent, text: "Rendered a video clip and placed it in your gallery and timeline.", steps: [`Motion: ${motionPhrase(motion)}`] }]);
     } catch (e) {
       setMsgs((m) => [...m, { role: "assistant", agent, text: `Video render failed — ${e instanceof Error ? e.message : "unknown error"}` }]);
     } finally {
@@ -214,9 +250,12 @@ function Editor() {
     }
   }
 
-  function addAsset(url: string, kind: "image" | "video", name: string) {
-    setAssets((x) => [...x, { id: uid(), name, kind, url, dur: kind === "video" ? 6 : 4 }]);
-    setMsgs((m) => [...m, { role: "assistant", agent, text: `Pulled ${name} from the canvas into the bin.` }]);
+  function addAsset(url: string, kind: "image" | "video", name: string, place = false) {
+    const asset: Asset = { id: uid(), name, kind, url, dur: kind === "video" ? 6 : 4, generated: true };
+    setAssets((x) => [...x, asset]);
+    if (place) addToTimeline(asset, kind === "image" ? "V2" : "V1");
+    setMediaView("generations");
+    setMsgs((m) => [...m, { role: "assistant", agent, text: `${name} is now in Generations${place ? " and on the timeline" : ""}.` }]);
   }
 
   async function exportVideo() {
@@ -338,6 +377,11 @@ function Editor() {
     setBrief("");
     setMsgs((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
+    const isOrchestrator = agent === "orchestrator";
+    if (isOrchestrator) {
+      const routed = ["GPT-6 Astra", "Claude Codex", "Claude Fable", "Doubao Pro", "Seed 1.6", "Skylark Lite"];
+      setCrew(routed.map((name) => ({ name, task: name.includes("Codex") ? "Precision cut" : name.includes("Fable") ? "Story pass" : name.includes("Astra") ? "Creative direction" : "ModelArk specialist pass", status: "working" })));
+    }
     try {
       const r = await fetch("/api/agent", {
         method: "POST",
@@ -349,11 +393,13 @@ function Editor() {
           clips: clips.map((c) => ({ id: c.id, assetId: c.assetId, track: c.track, start: c.start, dur: c.dur })),
         }),
       });
-      const d = (await r.json()) as { reply: string; steps: string[]; actions: AgentAction[] };
+      const d = (await r.json()) as { reply: string; steps: string[]; actions: AgentAction[]; crew?: CrewRun[] };
       if (d.actions?.length) applyActions(d.actions);
       setMsgs((m) => [...m, { role: "assistant", agent, text: d.reply, steps: d.steps }]);
+      if (isOrchestrator) setCrew(d.crew ?? []);
     } catch {
       setMsgs((m) => [...m, { role: "assistant", agent, text: "I lost connection to the editing brain. Try that again." }]);
+      if (isOrchestrator) setCrew((runs) => runs.map((run) => ({ ...run, status: "failed" })));
     } finally {
       setBusy(false);
     }
@@ -368,6 +414,12 @@ function Editor() {
       {/* top bar */}
       <header className="sticky top-0 z-50 flex h-12 items-center justify-between gap-2 border-b border-border bg-card/75 px-3 backdrop-blur-2xl sm:px-4">
         <div className="flex items-center gap-2">
+          <input aria-label="Session name" value={sessionName} onChange={(e) => setSessionName(e.target.value)} className="hidden w-32 rounded-md border border-border bg-transparent px-2 py-1 text-xs font-semibold outline-none focus:border-primary md:block" />
+          <select aria-label="Open session" defaultValue="" onChange={(e) => { if (e.target.value) openSession(e.target.value); e.target.value = ""; }} className="hidden max-w-36 rounded-md border border-border bg-background px-2 py-1.5 text-[11px] text-muted-foreground sm:block">
+            <option value="">Sessions · {sessions.length}</option>
+            {sessions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
+          </select>
+          <button onClick={saveSession} title="Save session" aria-label="Save session" className="grid size-8 place-items-center rounded-md border border-border glass-control text-muted-foreground transition hover:text-foreground"><Save className="size-3.5" /></button>
           <span className="flex items-center gap-1.5" aria-hidden="true">
             <i className="size-2.5 rounded-full bg-destructive" />
             <i className="size-2.5 rounded-full bg-chart-5" />
@@ -422,31 +474,32 @@ function Editor() {
         </main>
       ) : (
       <main className="grid flex-1 gap-2 p-2 sm:gap-3 sm:p-3 lg:grid-cols-[260px_minmax(0,1fr)_290px] lg:grid-rows-[minmax(320px,1fr)_minmax(260px,0.8fr)]">
-        {/* media bin */}
+        {/* visual media library */}
         <section className="flex flex-col gap-2 rounded-lg border border-border glass-panel p-3 lg:row-span-2">
           <div className="flex items-center justify-between">
-            <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Media bin</h2>
-            <span className="font-mono text-[10px] text-muted-foreground">{assets.length}</span>
+            <div className="flex rounded-md border border-border glass-control p-0.5">
+              <button onClick={() => setMediaView("media")} className={cn("flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold", mediaView === "media" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><FolderOpen className="size-3" /> Media</button>
+              <button onClick={() => setMediaView("generations")} className={cn("flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold", mediaView === "generations" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Images className="size-3" /> Generations</button>
+            </div>
+            <span className="font-mono text-[10px] text-muted-foreground">{mediaView === "media" ? assets.length : assets.filter((item) => item.generated).length}</span>
           </div>
           <label
             onDragOver={(e) => e.preventDefault()}
             onDrop={(e) => { e.preventDefault(); void ingest(e.dataTransfer.files); }}
             className="flex cursor-pointer items-center justify-center gap-2 rounded-md border border-dashed border-border glass-control py-4 text-xs text-muted-foreground transition hover:border-primary hover:text-foreground"
           >
-            <Upload className="size-3.5" /> Drop footage, music or VO
+             <Upload className="size-3.5" /> Import from gallery
             <input type="file" multiple accept="video/*,audio/*,image/*" className="hidden" onChange={(e) => void ingest(e.target.files)} />
           </label>
-          <button onClick={() => void generateBroll()} disabled={genBusy} className="flex items-center justify-center gap-2 rounded-md glass-control py-2 text-xs font-semibold transition hover:bg-muted disabled:opacity-50">
-            {genBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Wand2 className="size-3.5" />} Generate b-roll plate
-          </button>
-          <div className="space-y-2 rounded-md border border-border glass-control p-2">
-            <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Models</p>
-            <select value={imgEngine} onChange={(e) => setImgEngine(e.target.value)} className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[11px]">
-              {IMAGE_ENGINES.map((en) => <option key={en.id} value={en.id} disabled={!en.available}>{en.name}{en.available ? "" : " (unavailable)"}</option>)}
-            </select>
-            <select value={vidEngine} onChange={(e) => setVidEngine(e.target.value)} className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[11px]">
-              {VIDEO_ENGINES.map((en) => <option key={en.id} value={en.id} disabled={!en.available}>{en.name}{en.available ? "" : " (unavailable)"}</option>)}
-            </select>
+           <div className="space-y-2 rounded-md border border-border glass-control p-2">
+             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Image models</p>
+             <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+               {IMAGE_ENGINES.map((en, index) => <button key={en.id} disabled={!en.available} onClick={() => setImgEngine(en.id)} className={cn("relative min-w-24 snap-start overflow-hidden rounded-md border text-left disabled:opacity-35", imgEngine === en.id ? "border-primary ring-1 ring-primary" : "border-border")}><img src={[scene1, scene2, scene3][index % 3]} alt="" className="h-12 w-full object-cover opacity-70" /><span className="block truncate bg-background/90 px-1.5 py-1 text-[9px] font-bold">{en.name}</span></button>)}
+             </div>
+             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Video models</p>
+             <div className="flex snap-x gap-2 overflow-x-auto pb-1">
+               {VIDEO_ENGINES.map((en, index) => <button key={en.id} disabled={!en.available} onClick={() => setVidEngine(en.id)} className={cn("relative min-w-24 snap-start overflow-hidden rounded-md border text-left disabled:opacity-35", vidEngine === en.id ? "border-primary ring-1 ring-primary" : "border-border")}><img src={[scene3, scene1, scene2][index % 3]} alt="" className="h-12 w-full object-cover opacity-70" /><span className="block truncate bg-background/90 px-1.5 py-1 text-[9px] font-bold">{en.name}</span></button>)}
+             </div>
             <p className="pt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Motion control</p>
             <select value={motion.move} onChange={(e) => setMotion((m) => ({ ...m, move: e.target.value }))} className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[11px]">
               {CAMERA_MOVES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -460,25 +513,23 @@ function Editor() {
                 {[24, 30, 60].map((f) => <option key={f} value={f}>{f}fps</option>)}
               </select>
             </div>
-            <button onClick={() => void generateClip()} disabled={genBusy} className="flex w-full items-center justify-center gap-2 rounded-md bg-primary py-2 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-50">
-              {genBusy ? <Loader2 className="size-3.5 animate-spin" /> : <Film className="size-3.5" />} Generate video clip
-            </button>
+             <div className="grid grid-cols-2 gap-1.5"><button onClick={() => void generateBroll()} disabled={genBusy} className="flex items-center justify-center gap-1 rounded-md glass-control py-2 text-[10px] font-bold disabled:opacity-50"><Wand2 className="size-3" /> Image</button><button onClick={() => void generateClip()} disabled={genBusy} className="flex items-center justify-center gap-1 rounded-md bg-primary py-2 text-[10px] font-bold text-primary-foreground disabled:opacity-50">{genBusy ? <Loader2 className="size-3 animate-spin" /> : <Film className="size-3" />} Video</button></div>
           </div>
-          <div className="grid max-h-[220px] grid-cols-2 gap-2 overflow-y-auto lg:max-h-none lg:grid-cols-1">
-            {assets.map((a) => (
-              <div key={a.id} className="group flex items-center gap-2 rounded-md border border-border glass-control p-1.5 transition hover:border-primary/50">
-                <div className="grid h-9 w-14 shrink-0 place-items-center overflow-hidden rounded bg-muted">
+           <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto lg:max-h-none">
+             {assets.filter((item) => mediaView === "media" || item.generated).map((a) => (
+               <div key={a.id} className="group overflow-hidden rounded-md border border-border glass-control transition hover:border-primary/50">
+                 <div className="grid aspect-video w-full place-items-center overflow-hidden bg-muted">
                   {a.kind === "audio" ? <Volume2 className="size-4 text-muted-foreground" /> : a.kind === "video"
                     ? <video src={a.url} muted className="h-full w-full object-cover" />
                     : <img src={a.url} alt="" className="h-full w-full object-cover" />}
                 </div>
-                <div className="min-w-0 flex-1">
+                 <div className="flex items-center gap-1 p-1.5"><div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-medium">{a.name}</p>
                   <p className="font-mono text-[10px] text-muted-foreground">{a.dur.toFixed(1)}s · {a.kind}</p>
-                </div>
-                <button onClick={() => addToTimeline(a)} className="grid size-6 shrink-0 place-items-center rounded bg-secondary text-muted-foreground transition hover:bg-primary hover:text-primary-foreground"><Plus className="size-3.5" /></button>
+                 </div><button onClick={() => addToTimeline(a)} title="Add to timeline" className="grid size-6 shrink-0 place-items-center rounded bg-secondary text-muted-foreground transition hover:bg-primary hover:text-primary-foreground"><Plus className="size-3.5" /></button></div>
               </div>
             ))}
+             {mediaView === "generations" && !assets.some((item) => item.generated) && <p className="col-span-2 py-8 text-center text-[11px] text-muted-foreground">Your generated images and videos will appear here.</p>}
           </div>
         </section>
 
@@ -559,10 +610,16 @@ function Editor() {
           </div>
         </section>
 
-        {/* inspector */}
+        {/* director + inspector */}
         <section className="flex flex-col gap-3 rounded-lg border border-border glass-panel p-3 lg:min-h-0 lg:overflow-y-auto">
-          <h2 className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Inspector</h2>
-          {selected ? (
+          <div className="flex rounded-md border border-border glass-control p-0.5"><button onClick={() => setSideView("director")} className={cn("flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-bold", sideView === "director" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Bot className="size-3" /> Director</button><button onClick={() => setSideView("adjust")} className={cn("flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-bold", sideView === "adjust" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Layers3 className="size-3" /> Adjust</button></div>
+          {sideView === "director" ? <>
+            <div className="flex items-center gap-2"><span className="grid size-6 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground" style={{ background: active.accent }}>{active.short}</span><div><p className="text-xs font-bold">{active.name}</p><p className="text-[9px] text-muted-foreground">{active.role}</p></div></div>
+            {agent === "orchestrator" && <div className="space-y-1.5 rounded-md border border-border bg-background/30 p-2"><p className="font-mono text-[9px] uppercase text-muted-foreground">Parallel crew</p>{crew.length ? crew.map((run) => <div key={run.name} className="flex items-center gap-2 text-[10px]">{run.status === "complete" ? <CheckCircle2 className="size-3 text-chart-5" /> : run.status === "working" ? <Loader2 className="size-3 animate-spin text-primary" /> : run.status === "failed" ? <AlertCircle className="size-3 text-destructive" /> : <CircleDashed className="size-3 text-muted-foreground" />}<span className="font-bold">{run.name}</span><span className="truncate text-muted-foreground">{run.task}</span></div>) : <p className="text-[10px] text-muted-foreground">Send a brief to dispatch Astra, Codex, Fable and ModelArk.</p>}</div>}
+            <div ref={chatBox} className="max-h-[260px] flex-1 space-y-3 overflow-y-auto">{msgs.map((m, i) => <div key={i} className={cn("animate-rise text-xs leading-relaxed", m.role === "user" ? "ml-auto max-w-[88%] rounded-lg bg-primary/80 px-3 py-2 text-primary-foreground" : "max-w-[94%]")}><p>{m.text}</p>{m.steps && <ul className="mt-1.5 space-y-1 font-mono text-[9px] text-muted-foreground">{m.steps.map((step, j) => <li key={j}>› {step}</li>)}</ul>}</div>)}{busy && <p className="flex items-center gap-2 text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Routing the crew in parallel…</p>}<div ref={chatEnd} /></div>
+            <div className="flex gap-1.5 overflow-x-auto">{RECIPES.slice(0, 3).map((recipe) => <button key={recipe} onClick={() => void send(recipe)} className="shrink-0 rounded-full border border-border px-2 py-1 text-[9px] text-muted-foreground hover:border-primary">{recipe}</button>)}</div>
+            <form onSubmit={(e) => { e.preventDefault(); void send(brief); }} className="mt-auto flex items-end gap-2 rounded-md border border-primary/30 bg-background/50 p-2"><textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={2} placeholder="Tell the crew what to change…" className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-muted-foreground" /><button type="submit" disabled={busy || !brief.trim()} className="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-40"><Send className="size-3.5" /></button></form>
+          </> : selected ? (
             <div className="space-y-3 text-xs">
               <p className="truncate font-semibold">{selected.name}</p>
               <p className="font-mono text-[10px] text-muted-foreground">{selected.track} · {tc(selected.start)} → {tc(selected.start + selected.dur)}</p>
@@ -579,14 +636,14 @@ function Editor() {
               </div>
               <div>
                 <p className="mb-1 text-[10px] text-muted-foreground">Effect presets</p>
-                <div className="flex flex-wrap gap-1">
+                <div className="grid grid-cols-2 gap-2">
                   {PRESETS.map((p) => (
                     <button
                       key={p.id}
                       title={p.hint}
                       onClick={() => setClips((cs) => cs.map((c) => (c.id === selected.id ? { ...c, filter: p.filter ?? c.filter, speed: p.speed ?? c.speed, opacity: p.opacity ?? c.opacity } : c)))}
-                      className="rounded-full border border-border px-2 py-0.5 text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
-                    >{p.label}</button>
+                      className="group overflow-hidden rounded-md border border-border text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
+                    ><img src={scene2} alt="" className="h-12 w-full object-cover" style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} /><span className="block px-1.5 py-1 font-bold">{p.label}</span></button>
                   ))}
                 </div>
               </div>
@@ -600,37 +657,6 @@ function Editor() {
           )}
         </section>
 
-        {/* chat co-editor */}
-        <section className="flex min-h-[300px] flex-col rounded-lg border border-border glass-panel lg:col-start-3 lg:row-start-2 lg:min-h-0">
-          <div className="flex items-center gap-2 border-b border-border px-3 py-2">
-            <span className="grid size-5 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground" style={{ background: active.accent }}>{active.short}</span>
-            <span className="text-xs font-semibold">{active.name}</span>
-            <span className="truncate text-[11px] text-muted-foreground">{active.role}</span>
-          </div>
-          <div ref={chatBox} className="max-h-[300px] flex-1 space-y-3 overflow-y-auto p-3">
-            {msgs.map((m, i) => (
-              <div key={i} className={cn("animate-rise text-sm leading-relaxed", m.role === "user" ? "ml-auto max-w-[85%] rounded-lg rounded-br-sm bg-primary/90 px-3.5 py-2 text-primary-foreground" : "max-w-[92%]")}>
-                <p>{m.text}</p>
-                {m.steps && m.steps.length > 0 && (
-                  <ul className="mt-2 space-y-1 rounded-lg border border-border bg-muted/40 p-2 font-mono text-[10px] text-muted-foreground">
-                    {m.steps.map((s, j) => <li key={j}>› {s}</li>)}
-                  </ul>
-                )}
-              </div>
-            ))}
-            {busy && <p className="flex items-center gap-2 text-xs text-muted-foreground"><Loader2 className="size-3.5 animate-spin" /> {active.name} is working the timeline…</p>}
-            <div ref={chatEnd} />
-          </div>
-          <div className="flex flex-wrap gap-1.5 px-3 pb-2">
-            {RECIPES.map((r) => (
-              <button key={r} onClick={() => void send(r)} className="rounded-full border border-border px-2.5 py-1 text-[11px] text-muted-foreground transition hover:border-primary hover:text-foreground">{r}</button>
-            ))}
-          </div>
-          <form onSubmit={(e) => { e.preventDefault(); void send(brief); }} className="flex items-center gap-2 border-t border-border p-2.5">
-            <input value={brief} onChange={(e) => setBrief(e.target.value)} placeholder="Tell your co-editor what to cut…" className="flex-1 bg-transparent px-1 text-sm outline-none placeholder:text-muted-foreground" />
-            <button type="submit" disabled={busy || !brief.trim()} className="grid size-8 place-items-center rounded-lg bg-primary text-primary-foreground disabled:opacity-40"><Send className="size-4" /></button>
-          </form>
-        </section>
       </main>
       )}
     </div>
