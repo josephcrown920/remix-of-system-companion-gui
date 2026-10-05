@@ -10,3 +10,4 @@
 <!-- LOVABLE:END -->
 
 - Keep the editor as a single responsive workspace with reusable semantic glass utilities; this preserves consistent Mac-style depth across editor and canvas modes.
+- Keep editor-session serialization in the shared editor-state module; browser uploads use temporary URLs and must never be persisted as session data.

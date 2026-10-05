@@ -40,6 +40,12 @@ Crew: ${AGENTS.filter((a) => a.available && a.id !== "orchestrator").map((a) => 
 Also add a "crew" field: an array of 1-3 short strings naming which specialists you routed this brief to and why, e.g. "Claude Codex — timecode-accurate cuts".
 Begin your steps with the routing decision, then the concrete edits you made.`;
 
+const SPECIALIST_BRIEFS = [
+  { id: "astra", task: "Direct pacing, visual structure, and the overall creative arc." },
+  { id: "codex", task: "Propose precise timeline cuts, trims, track placement, and assembly." },
+  { id: "fable", task: "Strengthen story clarity, emotion, and the ending." },
+] as const;
+
 function extractJson(text: string) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) return { reply: text.slice(0, 400), steps: [], actions: [], crew: [] };
@@ -146,7 +152,34 @@ export const Route = createFileRoute("/api/agent")({
         ].join("\n\n");
 
         let out: { text?: string; error?: string; status?: number };
-        if (agent.api === "modelark") {
+        if (agent.id === "orchestrator") {
+          const key = apiKey();
+          const modelArkAgents = AGENTS.filter((candidate) => candidate.available && candidate.api === "modelark" && candidate.model);
+          const specialists = [
+            ...SPECIALIST_BRIEFS.map((specialist) => ({ ...specialist, model: agentById(specialist.id).model, api: agentById(specialist.id).api })),
+            ...modelArkAgents.map((specialist) => ({ id: specialist.id, task: specialist.role, model: specialist.model, api: specialist.api })),
+          ].filter((specialist) => specialist.model);
+          const results = await Promise.all(specialists.map(async (specialist) => {
+            const specialistSystem = `${BASE_SYSTEM}\nYou are ${agentById(specialist.id).name}. ${specialist.task} Return advice and proposed actions for the Orchestrator.`;
+            const response = specialist.api === "modelark"
+              ? await runModelArk(specialist.model ?? "", specialistSystem, user, b.history)
+              : specialist.api === "anthropic"
+                ? await runAnthropic(specialist.model ?? "", key, specialistSystem, user, b.history)
+                : await runOpenAI(specialist.model ?? "", key, specialistSystem, user, b.history);
+            return { name: agentById(specialist.id).name, task: specialist.task, ...response };
+          }));
+          const successful = results.filter((result) => result.text);
+          const report = successful.map((result) => `${result.name}: ${result.text}`).join("\n\n");
+          const synthesis = `${user}\n\nSPECIALIST PASSES (completed in parallel):\n${report || "No specialist completed a pass."}\n\nCombine the strongest compatible decisions. Return one valid JSON edit plan and include every specialist name in the crew field.`;
+          out = await runOpenAI(agent.model, key, ORCHESTRATOR_SYSTEM, synthesis, b.history);
+          if (out.text) {
+            const parsed = extractJson(out.text);
+            return json({
+              ...parsed,
+              crew: results.map((result) => ({ name: result.name, task: result.task, status: result.text ? "complete" : result.status === 401 ? "skipped" : "failed" })),
+            });
+          }
+        } else if (agent.api === "modelark") {
           out = await runModelArk(agent.model, system, user, b.history);
         } else {
           const key = apiKey();
