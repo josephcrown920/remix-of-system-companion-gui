@@ -1,5 +1,5 @@
 ---
-name: Surreal Creative Direction
+name: surreal-creative
 description: Develop distinctive surreal concepts and translate them into cinematic image and video briefs while preserving the user's intent.
 ---
 

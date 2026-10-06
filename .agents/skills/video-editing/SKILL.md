@@ -1,5 +1,5 @@
 ---
-name: Video Editing
+name: video-editing
 description: Turn an editing brief and available footage into clear, feasible, time-aware timeline decisions and iterative revisions.
 ---
 

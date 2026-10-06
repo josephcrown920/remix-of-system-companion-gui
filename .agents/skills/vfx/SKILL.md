@@ -1,5 +1,5 @@
 ---
-name: Visual Effects (VFX)
+name: vfx
 description: Plan practical visual effects and compositing passes that fit the footage, timeline, and available tools.
 ---
 
