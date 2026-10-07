@@ -1,8 +1,11 @@
 # Roadmap
 - [x] Clarify app type (content)
 - [x] Build AI video agent studio GUI (prompt → agent steps → storyboard → preview), demo data
-- [x] Restyle the editor as a responsive Mac-style black-lilac glass workspace
-- [ ] Redesign the media library, model cards, preset thumbnails, and adjacent co-editor prompt
-- [ ] Add persistent edit sessions and a generation gallery
-- [ ] Send NodeCanvas generations into both the media library and timeline
-- [ ] Run Orchestrator specialists in parallel with visible routing status
+- [x] Establish the Codex-inspired white Mac editor with semantic glass styling
+- [ ] Move co-editor chat, effects, presets, and generation controls to the left; keep preview/timeline centered and gallery/inspector right
+- [ ] Add bullet-time and VFX presets, up-to-4K video output, and image background removal
+- [ ] Stream agent replies and add optional spoken replies
+- [x] Keep saved sessions, generation gallery, and NodeCanvas-to-timeline flow
+- [x] Keep parallel Orchestrator routing visible
+- [ ] Verify desktop/mobile layout and run project checks
+- [ ] Refresh the project ZIP and PDF after implementation
