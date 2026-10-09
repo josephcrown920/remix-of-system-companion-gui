@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Apply all-black gradient theme and chat-first startup with empty media and timeline
+- [ ] Add fresh-session action and creative crew HUD with directing styles
 - [x] Clarify app type (content)
 - [x] Build AI video agent studio GUI (prompt → agent steps → storyboard → preview), demo data
 - [x] Establish the Codex-inspired white Mac editor with semantic glass styling
