@@ -67,41 +67,41 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0.975 0.006 285);
-  --foreground: oklch(0.22 0.025 285);
-  --card: oklch(1 0.002 285 / 78%);
-  --card-foreground: oklch(0.22 0.025 285);
-  --popover: oklch(0.99 0.003 285 / 97%);
-  --popover-foreground: oklch(0.22 0.025 285);
-  --primary: oklch(0.48 0.17 295);
+  --background: oklch(0 0 0);
+  --foreground: oklch(0.94 0.005 285);
+  --card: oklch(0.14 0 0 / 88%);
+  --card-foreground: var(--foreground);
+  --popover: oklch(0.17 0 0 / 98%);
+  --popover-foreground: var(--foreground);
+  --primary: oklch(0.65 0.19 300);
   --primary-foreground: oklch(0.99 0.004 285);
-  --secondary: oklch(0.94 0.014 285 / 90%);
-  --secondary-foreground: oklch(0.28 0.03 285);
-  --muted: oklch(0.95 0.01 285 / 85%);
-  --muted-foreground: oklch(0.49 0.025 285);
+  --secondary: oklch(0.21 0 0 / 90%);
+  --secondary-foreground: var(--foreground);
+  --muted: oklch(0.18 0 0 / 85%);
+  --muted-foreground: oklch(0.68 0.008 285);
   --accent: oklch(0.78 0.13 82);
   --accent-foreground: oklch(0.25 0.04 75);
   --destructive: oklch(0.63 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
-  --border: oklch(0.42 0.025 285 / 13%);
-  --input: oklch(0.42 0.025 285 / 19%);
-  --ring: oklch(0.48 0.17 295);
+  --border: oklch(0.95 0 0 / 13%);
+  --input: oklch(0.95 0 0 / 20%);
+  --ring: var(--primary);
   --chart-1: oklch(0.48 0.17 295);
   --chart-2: oklch(0.64 0.13 315);
   --chart-3: oklch(0.58 0.2 25);
   --chart-4: oklch(0.55 0.16 265);
   --chart-5: oklch(0.78 0.13 82);
-  --sidebar: oklch(0.99 0.003 285 / 86%);
-  --sidebar-foreground: oklch(0.22 0.025 285);
-  --sidebar-primary: oklch(0.48 0.17 295);
+  --sidebar: var(--card);
+  --sidebar-foreground: var(--foreground);
+  --sidebar-primary: var(--primary);
   --sidebar-primary-foreground: oklch(0.99 0.004 285);
-  --sidebar-accent: oklch(0.94 0.014 285 / 90%);
-  --sidebar-accent-foreground: oklch(0.28 0.03 285);
-  --sidebar-border: oklch(0.42 0.025 285 / 13%);
-  --sidebar-ring: oklch(0.48 0.17 295);
+  --sidebar-accent: var(--secondary);
+  --sidebar-accent-foreground: var(--foreground);
+  --sidebar-border: var(--border);
+  --sidebar-ring: var(--primary);
+  --gradient-studio: linear-gradient(115deg, var(--primary), var(--destructive) 65%, var(--accent));
   --glow: 0 18px 65px -28px color-mix(in oklab, var(--primary) 24%, transparent);
 }
-
 
 @layer base {
   * {
@@ -111,22 +111,36 @@
   body {
     background-color: var(--color-background);
     color: var(--color-foreground);
-    background-image: linear-gradient(145deg, color-mix(in oklab, var(--primary) 3%, transparent), transparent 42%), linear-gradient(to bottom, transparent, color-mix(in oklab, var(--accent) 4%, transparent));
+    background-image: none;
     background-attachment: fixed;
     font-weight: 500;
   }
 
-  button, select, input, textarea { font: inherit; }
+  button,
+  select,
+  input,
+  textarea {
+    font: inherit;
+  }
 
-  button, select, label[for], input[type="range"] { cursor: pointer; }
+  button,
+  select,
+  label[for],
+  input[type="range"] {
+    cursor: pointer;
+  }
 
-  ::selection { background: color-mix(in oklab, var(--primary) 42%, transparent); }
+  ::selection {
+    background: color-mix(in oklab, var(--primary) 42%, transparent);
+  }
 }
 
 @utility glass-panel {
   background: color-mix(in oklab, var(--card) 88%, transparent);
   backdrop-filter: blur(24px) saturate(125%);
-  box-shadow: inset 0 1px 0 color-mix(in oklab, var(--foreground) 4%, transparent), 0 22px 55px -40px color-mix(in oklab, var(--primary) 28%, transparent);
+  box-shadow:
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 4%, transparent),
+    0 22px 55px -40px color-mix(in oklab, var(--primary) 28%, transparent);
 }
 
 @utility glass-control {
@@ -134,11 +148,61 @@
   box-shadow: inset 0 1px 0 color-mix(in oklab, var(--foreground) 4%, transparent);
 }
 
-@utility studio-frame {
-  box-shadow: 0 32px 90px -38px oklch(0.2 0.02 285 / 22%), inset 0 1px 0 color-mix(in oklab, var(--foreground) 5%, transparent);
+@utility gradient-control {
+  background: var(--gradient-studio);
+  color: var(--primary-foreground);
 }
 
-@keyframes rise { from { opacity: 0; transform: translateY(8px) } to { opacity: 1; transform: none } }
-@utility animate-rise { animation: rise .4s cubic-bezier(.2,.7,.2,1) both; }
-@keyframes scan { from { transform: translateX(-100%) } to { transform: translateX(100%) } }
-@utility animate-scan { animation: scan 1.4s linear infinite; }
+.creative-composer > div {
+  background: var(--card);
+  border-color: var(--input);
+  box-shadow: 0 1px 0 var(--primary);
+}
+
+header::before {
+  content: "";
+  position: absolute;
+  inset: 0 0 auto;
+  height: 2px;
+  background: var(--gradient-studio);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+@utility studio-frame {
+  box-shadow:
+    0 32px 90px -38px oklch(0.2 0.02 285 / 22%),
+    inset 0 1px 0 color-mix(in oklab, var(--foreground) 5%, transparent);
+}
+
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@utility animate-rise {
+  animation: rise 0.4s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+@keyframes scan {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+@utility animate-scan {
+  animation: scan 1.4s linear infinite;
+}
