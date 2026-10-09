@@ -627,27 +627,7 @@ function Editor() {
     setBusy(true);
     const isOrchestrator = agent === "orchestrator";
     if (isOrchestrator) {
-      const routed = [
-        "GPT-6 Astra",
-        "Claude Codex",
-        "Claude Fable",
-        "Doubao Pro",
-        "Seed 1.6",
-        "Skylark Lite",
-      ];
-      setCrew(
-        routed.map((name) => ({
-          name,
-          task: name.includes("Codex")
-            ? "Precision cut"
-            : name.includes("Fable")
-              ? "Story pass"
-              : name.includes("Astra")
-                ? "Creative direction"
-                : "ModelArk specialist pass",
-          status: "working",
-        })),
-      );
+      setCrew([]);
     }
     try {
       const r = await fetch("/api/agent", {

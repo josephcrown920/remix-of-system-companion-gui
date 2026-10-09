@@ -1,12 +1,12 @@
 # Roadmap
-- [ ] Apply all-black gradient theme and chat-first startup with empty media and timeline
-- [ ] Add fresh-session action and creative crew HUD with directing styles
+- [x] Apply all-black gradient theme and chat-first startup with empty media and timeline
+- [x] Add fresh-session action and creative crew HUD with directing styles
 - [x] Clarify app type (content)
 - [x] Build AI video agent studio GUI (prompt → agent steps → storyboard → preview), demo data
 - [x] Establish the Codex-inspired white Mac editor with semantic glass styling
 - [ ] Move co-editor chat, effects, presets, and generation controls to the left; keep preview/timeline centered and a clearly visible gallery/inspector right
-- [ ] Keep image/video model selection compact so model cards do not dominate the workspace
-- [ ] Fix the AI message and shimmer type errors before continuing UI work
+- [x] Keep image/video model selection compact so model cards do not dominate the workspace
+- [x] Fix the AI message and shimmer type errors before continuing UI work
 - [ ] Add bullet-time and VFX presets, up-to-4K video output, and image background removal
 - [ ] Stream agent replies and add optional spoken replies
 - [x] Keep saved sessions, generation gallery, and NodeCanvas-to-timeline flow
