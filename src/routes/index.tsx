@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Clapperboard, Send, Loader2, Play, Pause, Scissors, MousePointer2, Upload, Plus, Trash2,
   ZoomIn, ZoomOut, Sparkles, Volume2, Eye, Gauge, Wand2, SkipBack, Download, Film,
-  Images, Save, FolderOpen, Bot, Layers3, CheckCircle2, CircleDashed, AlertCircle,
+  Images, Save, FolderOpen, Bot, Layers3, CheckCircle2, CircleDashed, AlertCircle, MessageSquare, ArrowRight,
 } from "lucide-react";
 import { AGENTS, TRACKS, TRACK_LABEL, agentById, type AgentAction, type TrackId } from "@/lib/agents";
 import {
@@ -15,6 +15,8 @@ import { generateImage, generateVideo } from "@/lib/generate";
 import { renderTimeline, download } from "@/lib/export";
 import { NodeCanvas } from "@/components/NodeCanvas";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
 import { clipForAsset, serializableAssets, type EditorAsset, type EditorClip, type SavedSession } from "@/lib/editor-state";
 import scene1 from "@/assets/scene1.jpg";
 import scene2 from "@/assets/scene2.jpg";
@@ -38,7 +40,6 @@ type Kind = "video" | "image" | "audio";
 type Asset = EditorAsset;
 type Clip = EditorClip;
 type Msg = { role: "user" | "assistant"; text: string; steps?: string[]; agent?: string };
-type CrewRun = { name: string; task: string; status: "queued" | "working" | "complete" | "skipped" | "failed" };
 
 const uid = () => Math.random().toString(36).slice(2, 8);
 const tc = (s: number) => {
@@ -46,40 +47,24 @@ const tc = (s: number) => {
   return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(Math.floor(s % 60)).padStart(2, "0")}:${String(f).padStart(2, "0")}`;
 };
 
-const DEMO: Asset[] = [
-  { id: "a1", name: "neon_street.jpg", kind: "image", url: scene1, dur: 4 },
-  { id: "a2", name: "raincoat_look.jpg", kind: "image", url: scene2, dur: 3 },
-  { id: "a3", name: "dawn_skyline.jpg", kind: "image", url: scene3, dur: 5 },
-];
-
-const RECIPES = [
-  "Build a 12s teaser from my rushes",
-  "Cut the dead air and tighten the pacing",
-  "Add b-roll on V2 over the talking head",
-  "Make the ending feel hopeful",
-];
+const GREETING: Msg = { role: "assistant", agent: "orchestrator", text: "What do you wanna create? Tell me your idea, the mood, and who it’s for. We can start from your files or create something new together." };
 
 function Editor() {
-  const [assets, setAssets] = useState<Asset[]>(DEMO);
-  const [clips, setClips] = useState<Clip[]>([
-    { id: "c1", assetId: "a1", track: "V1", start: 0, dur: 4, inPoint: 0, name: "neon_street", volume: 1, opacity: 1, speed: 1, filter: "none" },
-    { id: "c2", assetId: "a2", track: "V1", start: 4, dur: 3, inPoint: 0, name: "raincoat_look", volume: 1, opacity: 1, speed: 1, filter: "none" },
-    { id: "c3", assetId: "a3", track: "V1", start: 7, dur: 5, inPoint: 0, name: "dawn_skyline", volume: 1, opacity: 1, speed: 1, filter: "none" },
-  ]);
-  const [sel, setSel] = useState<string | null>("c1");
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [clips, setClips] = useState<Clip[]>([]);
+  const [sel, setSel] = useState<string | null>(null);
   const [playhead, setPlayhead] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [zoom, setZoom] = useState(46);
   const [tool, setTool] = useState<"select" | "razor">("select");
-  const [agent, setAgent] = useState("astra");
+  const [agent, setAgent] = useState("orchestrator");
   const [pickerOpen, setPickerOpen] = useState(false);
-  const [msgs, setMsgs] = useState<Msg[]>([
-    { role: "assistant", agent: "astra", text: "I'm your co-editor. Drop your footage in the bin on the left, then tell me the cut you want — I'll lay it on the timeline and we iterate from there." },
-  ]);
+  const [msgs, setMsgs] = useState<Msg[]>([GREETING]);
+  const [directingStyle, setDirectingStyle] = useState("original");
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [mode, setMode] = useState<"edit" | "canvas">("edit");
+  const [mode, setMode] = useState<"start" | "edit" | "canvas">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
   const [vidEngine, setVidEngine] = useState(DEFAULT_VIDEO_ENGINE);
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
@@ -93,8 +78,7 @@ function Editor() {
   const laneRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
-  const chatBox = useRef<HTMLDivElement>(null);
-  const chatEnd = useRef<HTMLDivElement>(null);
+  
 
   const duration = useMemo(() => Math.max(12, ...clips.map((c) => c.start + c.dur)), [clips]);
   const assetOf = useCallback((id: string) => assets.find((a) => a.id === id), [assets]);
@@ -153,11 +137,6 @@ function Editor() {
   }, [playing, audioClip, playhead]);
 
   useEffect(() => {
-    const box = chatBox.current;
-    if (box) box.scrollTo({ top: box.scrollHeight, behavior: "smooth" });
-  }, [msgs, busy]);
-
-  useEffect(() => {
     try {
       const stored = window.localStorage.getItem("reel-editor-sessions");
       if (stored) setSessions(JSON.parse(stored) as SavedSession[]);
@@ -165,6 +144,13 @@ function Editor() {
       setSessions([]);
     }
   }, []);
+
+  function newSession() {
+    if (busy || genBusy || exporting) return;
+    setAssets([]); setClips([]); setSel(null); setPlayhead(0); setPlaying(false);
+    setMsgs([GREETING]); setBrief(""); setCrew([]); setSessionName("Untitled cut");
+    setAgent("orchestrator"); setDirectingStyle("original"); setMode("start");
+  }
 
   function saveSession() {
     const session: SavedSession = {
@@ -179,7 +165,7 @@ function Editor() {
   function openSession(id: string) {
     const session = sessions.find((item) => item.id === id);
     if (!session) return;
-    setSessionName(session.name); setAssets(session.assets); setClips(session.clips); setMsgs(session.messages);
+    setMode("edit"); setPlaying(false); setCrew([]); setSessionName(session.name); setAssets(session.assets); setClips(session.clips); setMsgs(session.messages);
     setAgent(session.agent); setImgEngine(session.imageEngine); setVidEngine(session.videoEngine); setSel(null); setPlayhead(0);
   }
 
@@ -217,7 +203,8 @@ function Editor() {
   }
 
   async function generateBroll() {
-    const p = brief.trim() || "cinematic b-roll insert, shallow depth of field, moody light";
+    const p = brief.trim();
+    if (!p || genBusy) return;
     setGenBusy(true);
     try {
       const url = await generateImage(p, imgEngine);
@@ -234,10 +221,11 @@ function Editor() {
   }
 
   async function generateClip() {
-    const p = brief.trim() || "cinematic motion shot, moody light";
+    const p = brief.trim();
+    if (!p || genBusy) return;
     setGenBusy(true);
     try {
-      const url = await generateVideo(p, vidEngine, motionPhrase(motion), { onStatus: (s) => setMsgs((m) => [...m.slice(0, -1), { ...m[m.length - 1]!, text: `Rendering video… ${s}` }]) });
+      const url = await generateVideo(p, vidEngine, motionPhrase(motion), { onStatus: (s) => setMsgs((m) => [...m.slice(0, -1), { role: "assistant", agent, text: `Rendering video… ${s}` }]) });
       const a: Asset = { id: uid(), name: `clip_${uid()}.mp4`, kind: "video", url, dur: 6, generated: true };
       setAssets((x) => [...x, a]);
       addToTimeline(a, "V1");
@@ -387,18 +375,19 @@ function Editor() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          agent, brief: t,
+          agent, brief: `${t}\n\nDIRECTING STYLE: ${DIRECTING_STYLES.find((style) => style.id === directingStyle)?.brief ?? "Follow the user’s vision."}`,
           history: msgs.slice(-8).map((m) => ({ role: m.role, text: m.text })),
           assets: assets.map((a) => ({ id: a.id, name: a.name, kind: a.kind, dur: a.dur })),
           clips: clips.map((c) => ({ id: c.id, assetId: c.assetId, track: c.track, start: c.start, dur: c.dur })),
         }),
       });
       const d = (await r.json()) as { reply: string; steps: string[]; actions: AgentAction[]; crew?: CrewRun[] };
+      if (!r.ok) throw new Error(d.reply || "The creative crew could not respond.");
       if (d.actions?.length) applyActions(d.actions);
       setMsgs((m) => [...m, { role: "assistant", agent, text: d.reply, steps: d.steps }]);
       if (isOrchestrator) setCrew(d.crew ?? []);
-    } catch {
-      setMsgs((m) => [...m, { role: "assistant", agent, text: "I lost connection to the editing brain. Try that again." }]);
+    } catch (error) {
+      setMsgs((m) => [...m, { role: "assistant", agent, text: error instanceof Error ? error.message : "I lost connection to the editing brain. Try that again." }]);
       if (isOrchestrator) setCrew((runs) => runs.map((run) => ({ ...run, status: "failed" })));
     } finally {
       setBusy(false);
@@ -419,7 +408,8 @@ function Editor() {
             <option value="">Sessions · {sessions.length}</option>
             {sessions.map((item) => <option key={item.id} value={item.id}>{item.name}</option>)}
           </select>
-          <button onClick={saveSession} title="Save session" aria-label="Save session" className="grid size-8 place-items-center rounded-md border border-border glass-control text-muted-foreground transition hover:text-foreground"><Save className="size-3.5" /></button>
+          <Button variant="ghost" size="icon" onClick={newSession} disabled={busy || genBusy || exporting} title="New session" aria-label="New session"><Plus className="size-4" /></Button>
+          <Button variant="ghost" onClick={saveSession} title="Save session" aria-label="Save session" className="grid size-8 place-items-center rounded-md border border-border glass-control text-muted-foreground transition hover:text-foreground"><Save className="size-3.5" /></Button>
           <span className="flex items-center gap-1.5" aria-hidden="true">
             <i className="size-2.5 rounded-full bg-destructive" />
             <i className="size-2.5 rounded-full bg-chart-5" />
@@ -431,18 +421,19 @@ function Editor() {
         </div>
         <div className="flex items-center gap-2">
           <div className="flex rounded-lg border border-border glass-control p-0.5 text-[11px]">
-            <button onClick={() => setMode("edit")} className={cn("rounded-md px-2.5 py-1 transition", mode === "edit" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Editor</button>
-            <button onClick={() => setMode("canvas")} className={cn("rounded-md px-2.5 py-1 transition", mode === "canvas" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Canvas</button>
+            <Button size="sm" variant="ghost" onClick={() => setMode("start")} className={cn("h-6 px-2", mode === "start" && "bg-primary/20 text-primary")}><MessageSquare className="size-3" /><span className="hidden sm:inline">Chat</span></Button>
+            <Button variant="ghost" onClick={() => setMode("edit")} className={cn("rounded-md px-2.5 py-1 transition", mode === "edit" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Editor</Button>
+            <Button variant="ghost" onClick={() => setMode("canvas")} className={cn("rounded-md px-2.5 py-1 transition", mode === "canvas" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>Canvas</Button>
           </div>
-          <button onClick={() => void exportVideo()} disabled={exporting || !clips.length} className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40">
+          <Button variant="ghost" onClick={() => void exportVideo()} disabled={exporting || !clips.length} className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40">
             {exporting ? <Loader2 className="size-3.5 animate-spin" /> : <Download className="size-3.5" />}
             {exporting ? `${Math.round(exportPct * 100)}%` : "Export"}
-          </button>
-          <button onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-2 rounded-md border border-border glass-control px-2.5 py-1.5 text-xs transition hover:border-primary">
+          </Button>
+          <Button variant="ghost" onClick={() => setPickerOpen((o) => !o)} className="flex items-center gap-2 rounded-md border border-border glass-control px-2.5 py-1.5 text-xs transition hover:border-primary">
             <span className="grid size-5 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground" style={{ background: active.accent }}>{active.short}</span>
             <span className="hidden font-medium sm:inline">{active.name}</span>
             <Sparkles className="size-3 text-muted-foreground" />
-          </button>
+          </Button>
         </div>
       </header>
 
@@ -451,7 +442,7 @@ function Editor() {
           <p className="mb-2 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Choose your co-editor</p>
           <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
             {AGENTS.map((a) => (
-              <button
+              <Button variant="ghost"
                 key={a.id}
                 disabled={!a.available}
                 onClick={() => { setAgent(a.id); setPickerOpen(false); setMsgs((m) => [...m, { role: "assistant", agent: a.id, text: `${a.name} here — ${a.role.toLowerCase()}. Where do you want to take this cut?` }]); }}
@@ -462,24 +453,33 @@ function Editor() {
                   <span className="block truncate text-xs font-semibold">{a.name}</span>
                   <span className="block truncate text-[11px] text-muted-foreground">{a.available ? a.role : "Not available here yet"}</span>
                 </span>
-              </button>
+              </Button>
             ))}
           </div>
         </div>
       )}
 
-      {mode === "canvas" ? (
+      {mode === "start" ? (
+        <main className="flex flex-1 flex-col items-center px-5 pb-10 pt-12 sm:pt-20">
+          <div className="w-full max-w-2xl">
+            <div className="mb-8 flex items-center gap-3"><span className="gradient-control grid size-11 place-items-center rounded-lg"><Clapperboard className="size-5" /></span><div><p className="font-mono text-[10px] uppercase text-muted-foreground">REEL / CREATIVE ORCHESTRATOR</p><h1 className="mt-1 text-2xl font-bold">Your next idea starts here.</h1></div></div>
+            <CreativeChat messages={msgs} brief={brief} setBrief={setBrief} busy={busy} send={send} spacious />
+            <div className="my-5 flex flex-wrap items-center gap-2"><label htmlFor="directing-style" className="mr-1 text-xs text-muted-foreground">Direction</label><select id="directing-style" aria-label="Directing style" value={directingStyle} onChange={(e) => setDirectingStyle(e.target.value)} className="rounded-md border border-border bg-card px-3 py-2 text-xs">{DIRECTING_STYLES.map((style) => <option key={style.id} value={style.id}>{style.label}</option>)}</select><Button variant="ghost" size="sm" className="ml-auto" onClick={() => setMode("edit")}>Open workspace <ArrowRight /></Button></div>
+            <CrewBoard crew={crew} busy={busy} />
+          </div>
+        </main>
+      ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
         </main>
       ) : (
-      <main className="grid flex-1 gap-2 p-2 sm:gap-3 sm:p-3 lg:grid-cols-[260px_minmax(0,1fr)_290px] lg:grid-rows-[minmax(320px,1fr)_minmax(260px,0.8fr)]">
+      <main className="grid flex-1 gap-2 p-2 sm:gap-3 sm:p-3 lg:grid-cols-[290px_minmax(0,1fr)_260px] lg:grid-rows-[minmax(320px,1fr)_minmax(260px,0.8fr)]">
         {/* visual media library */}
-        <section className="flex flex-col gap-2 rounded-lg border border-border glass-panel p-3 lg:row-span-2">
+        <section className="flex flex-col gap-2 rounded-lg border border-border glass-panel p-3 lg:col-start-3 lg:row-start-1 lg:row-span-2">
           <div className="flex items-center justify-between">
             <div className="flex rounded-md border border-border glass-control p-0.5">
-              <button onClick={() => setMediaView("media")} className={cn("flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold", mediaView === "media" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><FolderOpen className="size-3" /> Media</button>
-              <button onClick={() => setMediaView("generations")} className={cn("flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold", mediaView === "generations" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Images className="size-3" /> Generations</button>
+              <Button variant="ghost" onClick={() => setMediaView("media")} className={cn("flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold", mediaView === "media" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><FolderOpen className="size-3" /> Media</Button>
+              <Button variant="ghost" onClick={() => setMediaView("generations")} className={cn("flex items-center gap-1 rounded px-2 py-1 text-[10px] font-bold", mediaView === "generations" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Images className="size-3" /> Generations</Button>
             </div>
             <span className="font-mono text-[10px] text-muted-foreground">{mediaView === "media" ? assets.length : assets.filter((item) => item.generated).length}</span>
           </div>
@@ -492,14 +492,8 @@ function Editor() {
             <input type="file" multiple accept="video/*,audio/*,image/*" className="hidden" onChange={(e) => void ingest(e.target.files)} />
           </label>
            <div className="space-y-2 rounded-md border border-border glass-control p-2">
-             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Image models</p>
-             <div className="flex snap-x gap-2 overflow-x-auto pb-1">
-               {IMAGE_ENGINES.map((en, index) => <button key={en.id} disabled={!en.available} onClick={() => setImgEngine(en.id)} className={cn("relative min-w-24 snap-start overflow-hidden rounded-md border text-left disabled:opacity-35", imgEngine === en.id ? "border-primary ring-1 ring-primary" : "border-border")}><img src={[scene1, scene2, scene3][index % 3]} alt="" className="h-12 w-full object-cover opacity-70" /><span className="block truncate bg-background/90 px-1.5 py-1 text-[9px] font-bold">{en.name}</span></button>)}
-             </div>
-             <p className="font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Video models</p>
-             <div className="flex snap-x gap-2 overflow-x-auto pb-1">
-               {VIDEO_ENGINES.map((en, index) => <button key={en.id} disabled={!en.available} onClick={() => setVidEngine(en.id)} className={cn("relative min-w-24 snap-start overflow-hidden rounded-md border text-left disabled:opacity-35", vidEngine === en.id ? "border-primary ring-1 ring-primary" : "border-border")}><img src={[scene3, scene1, scene2][index % 3]} alt="" className="h-12 w-full object-cover opacity-70" /><span className="block truncate bg-background/90 px-1.5 py-1 text-[9px] font-bold">{en.name}</span></button>)}
-             </div>
+             <label className="block text-[10px] text-muted-foreground">Image model<select aria-label="Image model" value={imgEngine} onChange={(e) => setImgEngine(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-[11px]">{IMAGE_ENGINES.map((en) => <option key={en.id} value={en.id} disabled={!en.available}>{en.name}{!en.available ? " · Not connected" : ""}</option>)}</select></label>
+             <label className="block text-[10px] text-muted-foreground">Video model<select aria-label="Video model" value={vidEngine} onChange={(e) => setVidEngine(e.target.value)} className="mt-1 w-full rounded-md border border-border bg-background px-2 py-2 text-[11px]">{VIDEO_ENGINES.map((en) => <option key={en.id} value={en.id} disabled={!en.available}>{en.name}{!en.available ? " · Not connected" : ""}</option>)}</select></label>
             <p className="pt-1 font-mono text-[10px] uppercase tracking-wider text-muted-foreground">Motion control</p>
             <select value={motion.move} onChange={(e) => setMotion((m) => ({ ...m, move: e.target.value }))} className="w-full rounded-md border border-border bg-background px-2 py-1.5 text-[11px]">
               {CAMERA_MOVES.map((c) => <option key={c.id} value={c.id}>{c.label}</option>)}
@@ -513,7 +507,7 @@ function Editor() {
                 {[24, 30, 60].map((f) => <option key={f} value={f}>{f}fps</option>)}
               </select>
             </div>
-             <div className="grid grid-cols-2 gap-1.5"><button onClick={() => void generateBroll()} disabled={genBusy} className="flex items-center justify-center gap-1 rounded-md glass-control py-2 text-[10px] font-bold disabled:opacity-50"><Wand2 className="size-3" /> Image</button><button onClick={() => void generateClip()} disabled={genBusy} className="flex items-center justify-center gap-1 rounded-md bg-primary py-2 text-[10px] font-bold text-primary-foreground disabled:opacity-50">{genBusy ? <Loader2 className="size-3 animate-spin" /> : <Film className="size-3" />} Video</button></div>
+             <div className="grid grid-cols-2 gap-1.5"><Button variant="ghost" onClick={() => void generateBroll()} disabled={genBusy || !brief.trim()} className="flex items-center justify-center gap-1 rounded-md glass-control py-2 text-[10px] font-bold disabled:opacity-50"><Wand2 className="size-3" /> Image</Button><Button variant="ghost" onClick={() => void generateClip()} disabled={genBusy || !brief.trim()} className="flex items-center justify-center gap-1 rounded-md bg-primary py-2 text-[10px] font-bold text-primary-foreground disabled:opacity-50">{genBusy ? <Loader2 className="size-3 animate-spin" /> : <Film className="size-3" />} Video</Button></div>
           </div>
            <div className="grid max-h-[300px] grid-cols-2 gap-2 overflow-y-auto lg:max-h-none">
              {assets.filter((item) => mediaView === "media" || item.generated).map((a) => (
@@ -526,15 +520,16 @@ function Editor() {
                  <div className="flex items-center gap-1 p-1.5"><div className="min-w-0 flex-1">
                   <p className="truncate text-[11px] font-medium">{a.name}</p>
                   <p className="font-mono text-[10px] text-muted-foreground">{a.dur.toFixed(1)}s · {a.kind}</p>
-                 </div><button onClick={() => addToTimeline(a)} title="Add to timeline" className="grid size-6 shrink-0 place-items-center rounded bg-secondary text-muted-foreground transition hover:bg-primary hover:text-primary-foreground"><Plus className="size-3.5" /></button></div>
+                 </div><Button variant="ghost" onClick={() => addToTimeline(a)} title="Add to timeline" className="grid size-6 shrink-0 place-items-center rounded bg-secondary text-muted-foreground transition hover:bg-primary hover:text-primary-foreground"><Plus className="size-3.5" /></Button></div>
               </div>
             ))}
+             {mediaView === "media" && !assets.length && <p className="col-span-2 py-8 text-center text-[11px] text-muted-foreground">No media yet.</p>}
              {mediaView === "generations" && !assets.some((item) => item.generated) && <p className="col-span-2 py-8 text-center text-[11px] text-muted-foreground">Your generated images and videos will appear here.</p>}
           </div>
         </section>
 
         {/* monitor + timeline */}
-        <section className="flex min-w-0 flex-col gap-3 lg:row-span-2">
+        <section className="flex min-w-0 flex-col gap-3 lg:col-start-2 lg:row-start-1 lg:row-span-2">
           <div className="overflow-hidden rounded-lg border border-border glass-panel">
             <div className="relative grid aspect-video place-items-center bg-background">
               {previewAsset && videoClip ? (
@@ -544,22 +539,22 @@ function Editor() {
                   <img src={previewAsset.url} alt="" className="h-full w-full object-contain" style={{ filter: FILTERS[videoClip.filter] ?? "none", opacity: videoClip.opacity }} />
                 )
               ) : (
-                <p className="font-mono text-xs text-muted-foreground">No clip under the playhead</p>
+                <p className="font-mono text-xs text-muted-foreground">{clips.length ? "No clip under the playhead" : "Your canvas is empty"}</p>
               )}
               {audioAsset && <audio ref={audioRef} key={audioClip?.id} src={audioAsset.url} className="hidden" />}
             </div>
             <div className="flex items-center gap-3 border-t border-border px-3 py-2">
-              <button onClick={() => { setPlaying(false); setPlayhead(0); }} className="text-muted-foreground transition hover:text-foreground"><SkipBack className="size-4" /></button>
-              <button onClick={() => setPlaying((p) => !p)} className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground">
+              <Button variant="ghost" onClick={() => { setPlaying(false); setPlayhead(0); }} className="text-muted-foreground transition hover:text-foreground"><SkipBack className="size-4" /></Button>
+              <Button variant="ghost" onClick={() => setPlaying((p) => !p)} className="grid size-8 place-items-center rounded-full bg-primary text-primary-foreground">
                 {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
-              </button>
+              </Button>
               <span className="font-mono text-xs text-primary">{tc(playhead)}</span>
               <span className="font-mono text-xs text-muted-foreground">/ {tc(duration)}</span>
               <div className="ml-auto flex items-center gap-1">
-                <button onClick={() => setTool("select")} className={cn("grid size-7 place-items-center rounded transition", tool === "select" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}><MousePointer2 className="size-3.5" /></button>
-                <button onClick={() => setTool("razor")} className={cn("grid size-7 place-items-center rounded transition", tool === "razor" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}><Scissors className="size-3.5" /></button>
-                <button onClick={() => setZoom((z) => Math.max(18, z - 10))} className="grid size-7 place-items-center rounded text-muted-foreground transition hover:bg-secondary"><ZoomOut className="size-3.5" /></button>
-                <button onClick={() => setZoom((z) => Math.min(160, z + 10))} className="grid size-7 place-items-center rounded text-muted-foreground transition hover:bg-secondary"><ZoomIn className="size-3.5" /></button>
+                <Button variant="ghost" onClick={() => setTool("select")} className={cn("grid size-7 place-items-center rounded transition", tool === "select" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}><MousePointer2 className="size-3.5" /></Button>
+                <Button variant="ghost" onClick={() => setTool("razor")} className={cn("grid size-7 place-items-center rounded transition", tool === "razor" ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-secondary")}><Scissors className="size-3.5" /></Button>
+                <Button variant="ghost" onClick={() => setZoom((z) => Math.max(18, z - 10))} className="grid size-7 place-items-center rounded text-muted-foreground transition hover:bg-secondary"><ZoomOut className="size-3.5" /></Button>
+                <Button variant="ghost" onClick={() => setZoom((z) => Math.min(160, z + 10))} className="grid size-7 place-items-center rounded text-muted-foreground transition hover:bg-secondary"><ZoomIn className="size-3.5" /></Button>
               </div>
             </div>
           </div>
@@ -611,14 +606,13 @@ function Editor() {
         </section>
 
         {/* director + inspector */}
-        <section className="flex flex-col gap-3 rounded-lg border border-border glass-panel p-3 lg:min-h-0 lg:overflow-y-auto">
-          <div className="flex rounded-md border border-border glass-control p-0.5"><button onClick={() => setSideView("director")} className={cn("flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-bold", sideView === "director" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Bot className="size-3" /> Director</button><button onClick={() => setSideView("adjust")} className={cn("flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-bold", sideView === "adjust" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Layers3 className="size-3" /> Adjust</button></div>
+        <section className="flex flex-col gap-3 rounded-lg border border-border glass-panel p-3 order-first lg:col-start-1 lg:row-start-1 lg:row-span-2 lg:min-h-0 lg:overflow-y-auto">
+          <div className="flex rounded-md border border-border glass-control p-0.5"><Button variant="ghost" onClick={() => setSideView("director")} className={cn("flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-bold", sideView === "director" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Bot className="size-3" /> Director</Button><Button variant="ghost" onClick={() => setSideView("adjust")} className={cn("flex flex-1 items-center justify-center gap-1 rounded px-2 py-1 text-[10px] font-bold", sideView === "adjust" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Layers3 className="size-3" /> Adjust</Button></div>
           {sideView === "director" ? <>
             <div className="flex items-center gap-2"><span className="grid size-6 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground" style={{ background: active.accent }}>{active.short}</span><div><p className="text-xs font-bold">{active.name}</p><p className="text-[9px] text-muted-foreground">{active.role}</p></div></div>
-            {agent === "orchestrator" && <div className="space-y-1.5 rounded-md border border-border bg-background/30 p-2"><p className="font-mono text-[9px] uppercase text-muted-foreground">Parallel crew</p>{crew.length ? crew.map((run) => <div key={run.name} className="flex items-center gap-2 text-[10px]">{run.status === "complete" ? <CheckCircle2 className="size-3 text-chart-5" /> : run.status === "working" ? <Loader2 className="size-3 animate-spin text-primary" /> : run.status === "failed" ? <AlertCircle className="size-3 text-destructive" /> : <CircleDashed className="size-3 text-muted-foreground" />}<span className="font-bold">{run.name}</span><span className="truncate text-muted-foreground">{run.task}</span></div>) : <p className="text-[10px] text-muted-foreground">Send a brief to dispatch Astra, Codex, Fable and ModelArk.</p>}</div>}
-            <div ref={chatBox} className="max-h-[260px] flex-1 space-y-3 overflow-y-auto">{msgs.map((m, i) => <div key={i} className={cn("animate-rise text-xs leading-relaxed", m.role === "user" ? "ml-auto max-w-[88%] rounded-lg bg-primary/80 px-3 py-2 text-primary-foreground" : "max-w-[94%]")}><p>{m.text}</p>{m.steps && <ul className="mt-1.5 space-y-1 font-mono text-[9px] text-muted-foreground">{m.steps.map((step, j) => <li key={j}>› {step}</li>)}</ul>}</div>)}{busy && <p className="flex items-center gap-2 text-[10px] text-muted-foreground"><Loader2 className="size-3 animate-spin" /> Routing the crew in parallel…</p>}<div ref={chatEnd} /></div>
-            <div className="flex gap-1.5 overflow-x-auto">{RECIPES.slice(0, 3).map((recipe) => <button key={recipe} onClick={() => void send(recipe)} className="shrink-0 rounded-full border border-border px-2 py-1 text-[9px] text-muted-foreground hover:border-primary">{recipe}</button>)}</div>
-            <form onSubmit={(e) => { e.preventDefault(); void send(brief); }} className="mt-auto flex items-end gap-2 rounded-md border border-primary/30 bg-background/50 p-2"><textarea value={brief} onChange={(e) => setBrief(e.target.value)} rows={2} placeholder="Tell the crew what to change…" className="min-w-0 flex-1 resize-none bg-transparent text-xs outline-none placeholder:text-muted-foreground" /><button type="submit" disabled={busy || !brief.trim()} className="grid size-8 shrink-0 place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-40"><Send className="size-3.5" /></button></form>
+            <CreativeChat messages={msgs} brief={brief} setBrief={setBrief} busy={busy} send={send} />
+            <select aria-label="Directing style" value={directingStyle} onChange={(e) => setDirectingStyle(e.target.value)} className="rounded-md border border-border bg-card px-2 py-2 text-xs">{DIRECTING_STYLES.map((style) => <option key={style.id} value={style.id}>{style.label}</option>)}</select>
+            {agent === "orchestrator" && <CrewBoard crew={crew} busy={busy} />}
           </> : selected ? (
             <div className="space-y-3 text-xs">
               <p className="truncate font-semibold">{selected.name}</p>
@@ -630,7 +624,7 @@ function Editor() {
                 <p className="mb-1 text-[10px] text-muted-foreground">Look</p>
                 <div className="flex flex-wrap gap-1">
                   {Object.keys(FILTERS).map((f) => (
-                    <button key={f} onClick={() => setClips((cs) => cs.map((c) => (c.id === selected.id ? { ...c, filter: f } : c)))} className={cn("rounded-full border px-2 py-0.5 text-[10px] capitalize transition", selected.filter === f ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground")}>{f}</button>
+                    <Button variant="ghost" key={f} onClick={() => setClips((cs) => cs.map((c) => (c.id === selected.id ? { ...c, filter: f } : c)))} className={cn("rounded-full border px-2 py-0.5 text-[10px] capitalize transition", selected.filter === f ? "border-primary text-primary" : "border-border text-muted-foreground hover:text-foreground")}>{f}</Button>
                   ))}
                 </div>
               </div>
@@ -638,18 +632,18 @@ function Editor() {
                 <p className="mb-1 text-[10px] text-muted-foreground">Effect presets</p>
                 <div className="grid grid-cols-2 gap-2">
                   {PRESETS.map((p) => (
-                    <button
+                    <Button variant="ghost"
                       key={p.id}
                       title={p.hint}
                       onClick={() => setClips((cs) => cs.map((c) => (c.id === selected.id ? { ...c, filter: p.filter ?? c.filter, speed: p.speed ?? c.speed, opacity: p.opacity ?? c.opacity } : c)))}
                       className="group overflow-hidden rounded-md border border-border text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
-                    ><img src={scene2} alt="" className="h-12 w-full object-cover" style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} /><span className="block px-1.5 py-1 font-bold">{p.label}</span></button>
+                    ><img src={scene2} alt="" className="h-12 w-full object-cover" style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} /><span className="block px-1.5 py-1 font-bold">{p.label}</span></Button>
                   ))}
                 </div>
               </div>
               <div className="flex gap-2">
-                <button onClick={() => splitAt(selected, playhead)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-secondary py-1.5 text-[11px] transition hover:bg-muted"><Scissors className="size-3" /> Split</button>
-                <button onClick={() => { setClips((cs) => cs.filter((c) => c.id !== selected.id)); setSel(null); }} className="flex items-center justify-center gap-1 rounded-lg bg-secondary px-2 py-1.5 text-[11px] text-destructive transition hover:bg-muted"><Trash2 className="size-3" /></button>
+                <Button variant="ghost" onClick={() => splitAt(selected, playhead)} className="flex flex-1 items-center justify-center gap-1 rounded-lg bg-secondary py-1.5 text-[11px] transition hover:bg-muted"><Scissors className="size-3" /> Split</Button>
+                <Button variant="ghost" onClick={() => { setClips((cs) => cs.filter((c) => c.id !== selected.id)); setSel(null); }} className="flex items-center justify-center gap-1 rounded-lg bg-secondary px-2 py-1.5 text-[11px] text-destructive transition hover:bg-muted"><Trash2 className="size-3" /></Button>
               </div>
             </div>
           ) : (
