@@ -14,7 +14,45 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      editor_generations: {
+        Row: {
+          created_at: string
+          id: string
+          kind: string
+          metadata: Json
+          mime_type: string
+          model: string
+          name: string
+          owner_id: string
+          prompt: string
+          storage_path: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          kind: string
+          metadata?: Json
+          mime_type: string
+          model?: string
+          name?: string
+          owner_id: string
+          prompt?: string
+          storage_path: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          kind?: string
+          metadata?: Json
+          mime_type?: string
+          model?: string
+          name?: string
+          owner_id?: string
+          prompt?: string
+          storage_path?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
