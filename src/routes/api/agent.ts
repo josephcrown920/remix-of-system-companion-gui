@@ -79,7 +79,7 @@ async function runOpenAI(model: string, key: string, system: string, user: strin
   ];
   const res = await fetch(`${GATEWAY}/v1/chat/completions`, {
     method: "POST",
-    signal,
+    signal: signal ?? null,
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
     body: JSON.stringify({ model, messages, reasoning_effort: "low", max_completion_tokens: 4000, stream: true, response_format: { type: "json_object" } }),
   });
@@ -109,7 +109,7 @@ async function runModelArk(model: string, system: string, user: string, history:
   ];
   const res = await fetch(`${ARK_BASE}/chat/completions`, {
     method: "POST",
-    signal,
+    signal: signal ?? null,
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
     body: JSON.stringify({ model, messages, temperature: 0.4, stream: true }),
   });
@@ -134,7 +134,7 @@ async function runAnthropic(model: string, key: string, system: string, user: st
   ];
   const res = await fetch(`${GATEWAY}/v1/messages`, {
     method: "POST",
-    signal,
+    signal: signal ?? null,
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
     body: JSON.stringify({ model, max_tokens: 6000, system, messages, stream: true }),
   });
