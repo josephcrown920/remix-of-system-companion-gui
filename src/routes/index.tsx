@@ -125,6 +125,7 @@ function Editor() {
   const [directingStyle, setDirectingStyle] = useState("original");
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
   const [mode, setMode] = useState<"start" | "edit" | "canvas">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
