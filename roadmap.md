@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Match the supplied cinematic opening cover in black and enable real live reply streaming
+- [ ] Connect the existing private generations bucket to a signed-in persistent gallery
 - [x] Apply all-black gradient theme and chat-first startup with empty media and timeline
 - [x] Add fresh-session action and creative crew HUD with directing styles
 - [x] Clarify app type (content)
