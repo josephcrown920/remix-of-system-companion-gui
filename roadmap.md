@@ -15,3 +15,4 @@
 - [x] Keep parallel Orchestrator routing visible
 - [ ] Verify desktop/mobile layout, Orchestrator specialist progress, gallery, and run project checks
 - [ ] Refresh the project ZIP and PDF after implementation
+- [ ] Let users attach reference images/files to agent briefs
