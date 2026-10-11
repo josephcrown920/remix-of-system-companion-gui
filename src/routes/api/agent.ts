@@ -1,6 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { GATEWAY, ARK_BASE, apiKey, arkKey } from "@/lib/gateway.server";
 import { AGENTS, agentById } from "@/lib/agents";
+import { readSse, partialReply } from "@/lib/agent-stream";
+import { z } from "zod";
 
 type Body = {
   agent: string;
@@ -9,6 +11,13 @@ type Body = {
   assets: { id: string; name: string; kind: string; dur: number }[];
   clips: { id: string; assetId: string; track: string; start: number; dur: number }[];
 };
+
+const bodySchema = z.object({
+  agent: z.string().max(80), brief: z.string().min(1).max(20000),
+  history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(20000) })).max(8).optional(),
+  assets: z.array(z.object({ id: z.string().max(100), name: z.string().max(500), kind: z.enum(["image", "video", "audio"]), dur: z.number().finite().nonnegative() })).max(1000),
+  clips: z.array(z.object({ id: z.string().max(100), assetId: z.string().max(100), track: z.enum(["V1", "V2", "V3", "A1", "A2"]), start: z.number().finite().nonnegative(), dur: z.number().finite().nonnegative() })).max(2000),
+});
 
 const LOOKS = "none, gold hour, noir, violet dusk, teal & orange, bleach, dreamy, crimson";
 
@@ -62,7 +71,7 @@ function extractJson(text: string) {
   }
 }
 
-async function runOpenAI(model: string, key: string, system: string, user: string, history: Body["history"]) {
+async function runOpenAI(model: string, key: string, system: string, user: string, history: Body["history"], onText?: (text: string) => void, signal?: AbortSignal) {
   const messages = [
     { role: "system", content: system },
     ...(history ?? []).slice(-8).map((h) => ({ role: h.role, content: h.text })),
@@ -70,15 +79,25 @@ async function runOpenAI(model: string, key: string, system: string, user: strin
   ];
   const res = await fetch(`${GATEWAY}/v1/chat/completions`, {
     method: "POST",
+    signal,
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
-    body: JSON.stringify({ model, messages, reasoning_effort: "low", max_completion_tokens: 4000, response_format: { type: "json_object" } }),
+    body: JSON.stringify({ model, messages, reasoning_effort: "low", max_completion_tokens: 4000, stream: true, response_format: { type: "json_object" } }),
   });
   if (!res.ok) return { error: await res.text(), status: res.status };
-  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return { text: data.choices?.[0]?.message?.content ?? "" };
+  if (!res.body) return { error: "Empty provider response", status: 502 };
+  let text = "";
+  let streamError = false;
+  await readSse(res.body, (_event, data) => {
+    if (data === "[DONE]") return;
+    const frame = JSON.parse(data) as { error?: unknown; choices?: { delta?: { content?: string } }[] };
+    if (frame.error) { streamError = true; return; }
+    const delta = frame.choices?.[0]?.delta?.content;
+    if (delta) { text += delta; onText?.(text); }
+  });
+  return streamError ? { error: "Provider stream failed", status: 502 } : { text };
 }
 
-async function runModelArk(model: string, system: string, user: string, history: Body["history"]) {
+async function runModelArk(model: string, system: string, user: string, history: Body["history"], onText?: (text: string) => void, signal?: AbortSignal) {
   const key = arkKey();
   if (!key) {
     return { error: "ModelArk is not connected on this workspace. Add a ModelArk API key to use these agents.", status: 401 };
@@ -90,45 +109,47 @@ async function runModelArk(model: string, system: string, user: string, history:
   ];
   const res = await fetch(`${ARK_BASE}/chat/completions`, {
     method: "POST",
+    signal,
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },
-    body: JSON.stringify({ model, messages, temperature: 0.4 }),
+    body: JSON.stringify({ model, messages, temperature: 0.4, stream: true }),
   });
   if (!res.ok) return { error: await res.text(), status: res.status };
-  const data = (await res.json()) as { choices?: { message?: { content?: string } }[] };
-  return { text: data.choices?.[0]?.message?.content ?? "" };
+  if (!res.body) return { error: "Empty provider response", status: 502 };
+  let text = "";
+  let streamError = false;
+  await readSse(res.body, (_event, data) => {
+    if (data === "[DONE]") return;
+    const frame = JSON.parse(data) as { error?: unknown; choices?: { delta?: { content?: string } }[] };
+    if (frame.error) { streamError = true; return; }
+    const delta = frame.choices?.[0]?.delta?.content;
+    if (delta) { text += delta; onText?.(text); }
+  });
+  return streamError ? { error: "Provider stream failed", status: 502 } : { text };
 }
 
-async function runAnthropic(model: string, key: string, system: string, user: string, history: Body["history"]) {
+async function runAnthropic(model: string, key: string, system: string, user: string, history: Body["history"], onText?: (text: string) => void, signal?: AbortSignal) {
   const messages = [
     ...(history ?? []).slice(-8).map((h) => ({ role: h.role, content: h.text })),
     { role: "user" as const, content: user },
   ];
   const res = await fetch(`${GATEWAY}/v1/messages`, {
     method: "POST",
+    signal,
     headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json", "X-Lovable-AIG-SDK": "fetch" },
     body: JSON.stringify({ model, max_tokens: 6000, system, messages, stream: true }),
   });
   if (!res.ok || !res.body) return { error: await res.text(), status: res.status };
-  const reader = res.body.getReader();
-  const dec = new TextDecoder();
-  let buf = "";
   let text = "";
-  for (;;) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    buf += dec.decode(value, { stream: true });
-    const lines = buf.split("\n");
-    buf = lines.pop() ?? "";
-    for (const line of lines) {
-      if (!line.startsWith("data:")) continue;
-      try {
-        const ev = JSON.parse(line.slice(5).trim()) as { type?: string; delta?: { type?: string; text?: string } };
-        if (ev.type === "content_block_delta" && ev.delta?.type === "text_delta") text += ev.delta.text ?? "";
-      } catch {
-        /* partial frame */
-      }
+  let streamError = false;
+  await readSse(res.body, (event, data) => {
+    const frame = JSON.parse(data) as { type?: string; delta?: { type?: string; text?: string } };
+    if (event === "error" || frame.type === "error") { streamError = true; return; }
+    if (frame.type === "content_block_delta" && frame.delta?.type === "text_delta") {
+      text += frame.delta.text ?? "";
+      onText?.(text);
     }
-  }
+  });
+  if (streamError) return { error: "Provider stream failed", status: 502 };
   return { text };
 }
 
@@ -136,9 +157,26 @@ export const Route = createFileRoute("/api/agent")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const b = (await request.json()) as Body;
+        const parsedBody = bodySchema.safeParse(await request.json().catch(() => null));
+        if (!parsedBody.success) return Response.json({ reply: "Please send a valid creative brief." }, { status: 400 });
+        const b = parsedBody.data;
         const agent = agentById(b.agent);
-        const json = (v: unknown, status = 200) => new Response(JSON.stringify(v), { status, headers: { "Content-Type": "application/json" } });
+        const abort = new AbortController();
+        request.signal.addEventListener("abort", () => abort.abort(), { once: true });
+        let closed = false;
+        const encoder = new TextEncoder();
+        const stream = new ReadableStream<Uint8Array>({
+          start(controller) {
+            const emit = (event: string, data: unknown) => {
+              if (!closed && !abort.signal.aborted) controller.enqueue(encoder.encode(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`));
+            };
+            const json = (value: unknown, status = 200) => {
+              emit(status >= 400 ? "error" : "done", value);
+              return undefined;
+            };
+            const onText = (text: string) => emit("reply", { text: partialReply(text) });
+            const heartbeat = setInterval(() => emit("ping", {}), 15000);
+            const execute = async () => {
 
         if (!agent.available || !agent.model) {
           return json({ reply: `${agent.name} isn't available on this workspace yet. Pick another editor.`, steps: [], actions: [], crew: [] });
@@ -165,13 +203,13 @@ export const Route = createFileRoute("/api/agent")({
               ? await runModelArk(specialist.model ?? "", specialistSystem, user, b.history)
               : specialist.api === "anthropic"
                 ? await runAnthropic(specialist.model ?? "", key, specialistSystem, user, b.history)
-                : await runOpenAI(specialist.model ?? "", key, specialistSystem, user, b.history);
+                : await runOpenAI(specialist.model ?? "", key, specialistSystem, user, b.history, undefined, abort.signal);
             return { name: agentById(specialist.id).name, task: specialist.task, ...response };
           }));
           const successful = results.filter((result) => result.text);
           const report = successful.map((result) => `${result.name}: ${result.text}`).join("\n\n");
           const synthesis = `${user}\n\nSPECIALIST PASSES (completed in parallel):\n${report || "No specialist completed a pass."}\n\nCombine the strongest compatible decisions. Return one valid JSON edit plan and include every specialist name in the crew field.`;
-          out = await runOpenAI(agent.model, key, ORCHESTRATOR_SYSTEM, synthesis, b.history);
+          out = await runOpenAI(agent.model, key, ORCHESTRATOR_SYSTEM, synthesis, b.history, onText, abort.signal);
           if (out.text) {
             const parsed = extractJson(out.text);
             return json({
@@ -180,12 +218,12 @@ export const Route = createFileRoute("/api/agent")({
             });
           }
         } else if (agent.api === "modelark") {
-          out = await runModelArk(agent.model, system, user, b.history);
+          out = await runModelArk(agent.model, system, user, b.history, onText, abort.signal);
         } else {
           const key = apiKey();
           out = agent.api === "anthropic"
-            ? await runAnthropic(agent.model, key, system, user, b.history)
-            : await runOpenAI(agent.model, key, system, user, b.history);
+            ? await runAnthropic(agent.model, key, system, user, b.history, onText, abort.signal)
+            : await runOpenAI(agent.model, key, system, user, b.history, undefined, abort.signal);
         }
 
         if (out.error) {
@@ -197,7 +235,17 @@ export const Route = createFileRoute("/api/agent")({
             : "The editor agent couldn't respond.";
           return json({ reply: msg, steps: [], actions: [], crew: [] }, status);
         }
-        return json(extractJson(out.text ?? ""));
+        if (!out.text) return json({ reply: "The editor returned an empty reply. Please try again." }, 502);
+        return json(extractJson(out.text));
+            };
+            void execute().catch(() => emit("error", { reply: "The creative crew lost connection. Please try again." })).finally(() => {
+              clearInterval(heartbeat);
+              if (!closed) { closed = true; controller.close(); }
+            });
+          },
+          cancel() { closed = true; abort.abort(); },
+        });
+        return new Response(stream, { headers: { "Content-Type": "text/event-stream", "Cache-Control": "no-cache, no-transform", "X-Accel-Buffering": "no" } });
       },
     },
   },
