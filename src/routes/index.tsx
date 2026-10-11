@@ -897,7 +897,7 @@ function Editor() {
             document.getElementById("creative-start")?.scrollIntoView({ behavior: "smooth" });
           }}
         >
-          <CreativeChat messages={msgs} brief={brief} setBrief={setBrief} busy={busy} send={send} spacious />
+          <CreativeChat messages={msgs} brief={brief} setBrief={setBrief} busy={busy} send={send} onAttach={(f) => void ingest(f)} references={assets.map((a) => a.name)} spacious />
           <div className="my-5 flex flex-wrap items-center gap-2">
             <label htmlFor="directing-style" className="mr-1 text-xs text-muted-foreground">Direction</label>
             <select
@@ -1356,7 +1356,7 @@ function Editor() {
                   brief={brief}
                   setBrief={setBrief}
                   busy={busy}
-                  send={send}
+                  send={send} onAttach={(f) => void ingest(f)} references={assets.map((a) => a.name)}
                 />
                 <select
                   aria-label="Directing style"
