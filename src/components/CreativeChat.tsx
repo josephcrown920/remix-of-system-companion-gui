@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Clapperboard, CheckCircle2, Loader2, AlertCircle, CircleDashed } from "lucide-react";
+import { Paperclip, Clapperboard, CheckCircle2, Loader2, AlertCircle, CircleDashed } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Conversation,
@@ -104,6 +104,8 @@ export function CreativeChat({
   busy,
   send,
   spacious = false,
+  onAttach,
+  references = [],
 }: {
   messages: CreativeMessage[];
   brief: string;
@@ -111,7 +113,10 @@ export function CreativeChat({
   busy: boolean;
   send: (text: string) => Promise<void>;
   spacious?: boolean;
+  onAttach?: (files: FileList | null) => void;
+  references?: string[];
 }) {
+  const fileInput = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
   useEffect(() => {
     if (!busy) textarea.current?.focus();
@@ -161,8 +166,16 @@ export function CreativeChat({
           className="min-h-24 text-sm"
         />
         <PromptInputFooter>
-          <span className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-            <Clapperboard className="size-3" /> Your co-editor
+          <span className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
+            {onAttach && (
+              <>
+                <input ref={fileInput} type="file" multiple accept="image/*,video/*,audio/*" className="hidden" aria-label="Reference files" onChange={(e) => { onAttach(e.target.files); e.target.value = ""; }} />
+                <Button type="button" variant="ghost" size="icon" className="size-7" aria-label="Add reference files" title="Add references" onClick={() => fileInput.current?.click()}>
+                  <Paperclip className="size-3.5" />
+                </Button>
+              </>
+            )}
+            {references.length ? <span className="truncate">{references.length} reference{references.length > 1 ? "s" : ""}: {references.slice(-2).join(", ")}</span> : <><Clapperboard className="size-3" /> Your co-editor</>}
           </span>
           <PromptInputSubmit
             disabled={busy || !brief.trim()}

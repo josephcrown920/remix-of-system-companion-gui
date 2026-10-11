@@ -59,6 +59,8 @@ import { NodeCanvas } from "@/components/NodeCanvas";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
+import { StudioCover } from "@/components/StudioCover";
+import { readSse } from "@/lib/agent-stream";
 import {
   clipForAsset,
   serializableAssets,
@@ -123,6 +125,7 @@ function Editor() {
   const [directingStyle, setDirectingStyle] = useState("original");
   const [brief, setBrief] = useState("");
   const [busy, setBusy] = useState(false);
+  const [voiceOn, setVoiceOn] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
   const [mode, setMode] = useState<"start" | "edit" | "canvas">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
@@ -647,16 +650,35 @@ function Editor() {
           })),
         }),
       });
-      const d = (await r.json()) as {
-        reply: string;
-        steps: string[];
-        actions: AgentAction[];
-        crew?: CrewRun[];
-      };
-      if (!r.ok) throw new Error(d.reply || "The creative crew could not respond.");
-      if (d.actions?.length) applyActions(d.actions);
-      setMsgs((m) => [...m, { role: "assistant", agent, text: d.reply, steps: d.steps }]);
-      if (isOrchestrator) setCrew(d.crew ?? []);
+      type Done = { reply: string; steps?: string[]; actions?: AgentAction[]; crew?: CrewRun[] };
+      if (!r.ok || !r.body) {
+        const e = (await r.json().catch(() => null)) as Done | null;
+        throw new Error(e?.reply || "The creative crew could not respond.");
+      }
+      setMsgs((m) => [...m, { role: "assistant", agent, text: "" }]);
+      const setLast = (patch: Partial<Msg>) =>
+        setMsgs((m) => [...m.slice(0, -1), { ...m[m.length - 1]!, ...patch }]);
+      let final: Done | null = null;
+      let failed = false;
+      await readSse(r.body, (event, data) => {
+        if (event === "ping") return;
+        const d = JSON.parse(data) as Done & { text?: string };
+        if (event === "reply") {
+          if (d.text) setLast({ text: d.text });
+        } else if (event === "done" || event === "error") {
+          final = d;
+          failed = event === "error";
+        }
+      });
+      const done = final as Done | null;
+      if (!done) throw new Error("The creative crew lost connection. Please try again.");
+      if (!failed && done.actions?.length) applyActions(done.actions);
+      setLast({ text: done.reply, steps: done.steps ?? [] });
+      if (isOrchestrator) setCrew(failed ? [] : (done.crew ?? []));
+      if (!failed && voiceOn && "speechSynthesis" in window) {
+        window.speechSynthesis.cancel();
+        window.speechSynthesis.speak(new SpeechSynthesisUtterance(done.reply));
+      }
     } catch (error) {
       setMsgs((m) => [
         ...m,
@@ -739,6 +761,19 @@ function Editor() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={voiceOn}
+            aria-label={voiceOn ? "Mute voice replies" : "Turn on voice replies"}
+            onClick={() => {
+              if (voiceOn && typeof window !== "undefined") window.speechSynthesis?.cancel();
+              setVoiceOn((v) => !v);
+            }}
+            className={cn("h-7 px-2 text-[11px]", voiceOn && "text-primary")}
+          >
+            {voiceOn ? "Voice on" : "Voice off"}
+          </Button>
           <div className="flex rounded-lg border border-border glass-control p-0.5 text-[11px]">
             <Button
               size="sm"
@@ -854,51 +889,31 @@ function Editor() {
       )}
 
       {mode === "start" ? (
-        <main className="flex flex-1 flex-col items-center px-5 pb-10 pt-12 sm:pt-20">
-          <div className="w-full max-w-2xl">
-            <div className="mb-8 flex items-center gap-3">
-              <span className="gradient-control grid size-11 place-items-center rounded-lg">
-                <Clapperboard className="size-5" />
-              </span>
-              <div>
-                <p className="font-mono text-[10px] uppercase text-muted-foreground">
-                  REEL / CREATIVE ORCHESTRATOR
-                </p>
-                <h1 className="mt-1 text-2xl font-bold">Your next idea starts here.</h1>
-              </div>
-            </div>
-            <CreativeChat
-              messages={msgs}
-              brief={brief}
-              setBrief={setBrief}
-              busy={busy}
-              send={send}
-              spacious
-            />
-            <div className="my-5 flex flex-wrap items-center gap-2">
-              <label htmlFor="directing-style" className="mr-1 text-xs text-muted-foreground">
-                Direction
-              </label>
-              <select
-                id="directing-style"
-                aria-label="Directing style"
-                value={directingStyle}
-                onChange={(e) => setDirectingStyle(e.target.value)}
-                className="rounded-md border border-border bg-card px-3 py-2 text-xs"
-              >
-                {DIRECTING_STYLES.map((style) => (
-                  <option key={style.id} value={style.id}>
-                    {style.label}
-                  </option>
-                ))}
-              </select>
-              <Button variant="ghost" size="sm" className="ml-auto" onClick={() => setMode("edit")}>
-                Open workspace <ArrowRight />
-              </Button>
-            </div>
-            <CrewBoard crew={crew} busy={busy} />
+        <StudioCover
+          onWorkspace={() => setMode("edit")}
+          onNew={newSession}
+          onIdea={(idea) => {
+            setBrief(idea);
+            document.getElementById("creative-start")?.scrollIntoView({ behavior: "smooth" });
+          }}
+        >
+          <CreativeChat messages={msgs} brief={brief} setBrief={setBrief} busy={busy} send={send} onAttach={(f) => void ingest(f)} references={assets.map((a) => a.name)} spacious />
+          <div className="my-5 flex flex-wrap items-center gap-2">
+            <label htmlFor="directing-style" className="mr-1 text-xs text-muted-foreground">Direction</label>
+            <select
+              id="directing-style"
+              aria-label="Directing style"
+              value={directingStyle}
+              onChange={(e) => setDirectingStyle(e.target.value)}
+              className="rounded-md border border-border bg-card px-3 py-2 text-xs"
+            >
+              {DIRECTING_STYLES.map((style) => (
+                <option key={style.id} value={style.id}>{style.label}</option>
+              ))}
+            </select>
           </div>
-        </main>
+          <CrewBoard crew={crew} busy={busy} />
+        </StudioCover>
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
@@ -1341,7 +1356,7 @@ function Editor() {
                   brief={brief}
                   setBrief={setBrief}
                   busy={busy}
-                  send={send}
+                  send={send} onAttach={(f) => void ingest(f)} references={assets.map((a) => a.name)}
                 />
                 <select
                   aria-label="Directing style"
