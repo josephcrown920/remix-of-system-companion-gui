@@ -1,5 +1,5 @@
 # Roadmap
-- [ ] Match the supplied cinematic opening cover in black and enable real live reply streaming
+- [x] Match the supplied cinematic opening cover in black and enable real live reply streaming
 - [ ] Connect the existing private generations bucket to a signed-in persistent gallery
 - [x] Apply all-black gradient theme and chat-first startup with empty media and timeline
 - [x] Add fresh-session action and creative crew HUD with directing styles
@@ -10,9 +10,9 @@
 - [x] Keep image/video model selection compact so model cards do not dominate the workspace
 - [x] Fix the AI message and shimmer type errors before continuing UI work
 - [ ] Add bullet-time and VFX presets, up-to-4K video output, and image background removal
-- [ ] Stream agent replies and add optional spoken replies
+- [x] Stream agent replies and add optional spoken replies
 - [x] Keep saved sessions, generation gallery, and NodeCanvas-to-timeline flow
 - [x] Keep parallel Orchestrator routing visible
-- [ ] Verify desktop/mobile layout, Orchestrator specialist progress, gallery, and run project checks
+- [x] Verify desktop/mobile layout, Orchestrator specialist progress, gallery, and run project checks
 - [ ] Refresh the project ZIP and PDF after implementation
 - [x] Let users attach reference images/files to agent briefs
