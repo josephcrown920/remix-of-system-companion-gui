@@ -761,6 +761,19 @@ function Editor() {
           </span>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            size="sm"
+            variant="ghost"
+            aria-pressed={voiceOn}
+            aria-label={voiceOn ? "Mute voice replies" : "Turn on voice replies"}
+            onClick={() => {
+              if (voiceOn && typeof window !== "undefined") window.speechSynthesis?.cancel();
+              setVoiceOn((v) => !v);
+            }}
+            className={cn("h-7 px-2 text-[11px]", voiceOn && "text-primary")}
+          >
+            {voiceOn ? "Voice on" : "Voice off"}
+          </Button>
           <div className="flex rounded-lg border border-border glass-control p-0.5 text-[11px]">
             <Button
               size="sm"
