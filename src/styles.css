@@ -159,6 +159,27 @@
   box-shadow: 0 1px 0 var(--primary);
 }
 
+.cover-intro {
+  min-height: min(620px, 58svh);
+  padding-top: 56px;
+  padding-bottom: 90px;
+}
+.cover-title {
+  font-size: 52px;
+  line-height: 1.12;
+  letter-spacing: 0;
+}
+.cover-word {
+  background: var(--gradient-studio);
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: rise 0.5s ease both;
+}
+@media (max-width: 640px) {
+  .cover-title { font-size: 34px; }
+  .cover-intro { min-height: 430px; padding-top: 44px; }
+}
+
 header::before {
   content: "";
   position: absolute;
