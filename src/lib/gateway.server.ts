@@ -2,8 +2,8 @@ export const GATEWAY = "https://ai.gateway.lovable.dev";
 export const IMAGE_MODEL = "openai/gpt-image-2.5-sunburst";
 export const VIDEO_MODEL = "google/veo-3.1-fast";
 
-/** ModelArk (Volcengine Ark) — optional, enabled by setting ARK_API_KEY. */
-export const ARK_BASE = "https://ark.cn-beijing.volces.com/api/v3";
+/** BytePlus ModelArk — enabled by setting ARK_API_KEY. */
+export const ARK_BASE = "https://ark.ap-southeast.bytepluses.com/api/v3";
 
 export function arkKey() {
   return process.env["ARK_API_KEY"] ?? "";
