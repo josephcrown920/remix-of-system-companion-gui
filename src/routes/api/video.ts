@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { GATEWAY, VIDEO_MODEL, apiKey, passthrough } from "@/lib/gateway.server";
 import { VIDEO_ENGINES } from "@/lib/engines";
+import { arkFetch, arkError } from "@/lib/ark.server";
 
 type Media = { data: string; mime: string };
 type Body = { prompt: string; engine?: string; motion?: string; duration?: string; image?: Media; video?: Media };
@@ -10,7 +11,6 @@ export const Route = createFileRoute("/api/video")({
   server: {
     handlers: {
       POST: async ({ request }) => {
-        const key = apiKey();
         const b = (await request.json()) as Body;
         if (!b.prompt?.trim()) return new Response("Prompt required", { status: 400 });
 
@@ -21,6 +21,16 @@ export const Route = createFileRoute("/api/video")({
         const model = e?.model ?? VIDEO_MODEL;
 
         const prompt = b.motion ? `${b.prompt}\n\n${b.motion}` : b.prompt;
+        if (e?.provider === "ark") {
+          const secs = parseInt(b.duration ?? "5", 10) || 5;
+          const content: unknown[] = [{ type: "text", text: `${prompt} --duration ${secs} --resolution 720p --ratio 16:9` }];
+          if (b.image) content.push({ type: "image_url", image_url: { url: `data:${b.image.mime};base64,${b.image.data}` } });
+          const r = await arkFetch("/contents/generations/tasks", { method: "POST", body: JSON.stringify({ model, content }) });
+          if (!r.ok) return arkError(r);
+          const job = (await r.json()) as { id?: string };
+          return Response.json({ id: `ark_${job.id}`, status: "queued" });
+        }
+        const key = apiKey();
         const parts: unknown[] = [{ type: "text", text: prompt }];
         if (b.image) parts.push({ type: "image", data: b.image.data, mime_type: b.image.mime });
         if (b.video) parts.push({ type: "video", data: b.video.data, mime_type: b.video.mime });

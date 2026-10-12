@@ -200,7 +200,7 @@ export const Route = createFileRoute("/api/agent")({
         let out: { text?: string; error?: string; status?: number };
         if (agent.id === "orchestrator") {
           const key = apiKey();
-          const modelArkAgents = AGENTS.filter((candidate) => candidate.available && candidate.api === "modelark" && candidate.model);
+          const modelArkAgents = AGENTS.filter((candidate) => candidate.available && candidate.api === "modelark" && candidate.model).slice(0, 3);
           const specialists = [
             ...SPECIALIST_BRIEFS.map((specialist) => ({ ...specialist, model: agentById(specialist.id).model, api: agentById(specialist.id).api })),
             ...modelArkAgents.map((specialist) => ({ id: specialist.id, task: specialist.role, model: specialist.model, api: specialist.api })),
