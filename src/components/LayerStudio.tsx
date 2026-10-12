@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { generateImage, urlToBlob } from "@/lib/generate";
 import { IMAGE_ENGINES } from "@/lib/engines";
+import { removeImageBackground } from "@/lib/remove-background";
 
 type Box = { x: number; y: number; w: number; h: number };
 type Plate = { id: string; name: string; visible: boolean; locked: boolean };
@@ -17,7 +18,7 @@ const PLATE_NAMES = [
 const RESOLUTIONS = ["1K", "1.5K", "2K", "4K"] as const;
 const TOOLS = [
   { id: "decompose", label: "Layer decomposition", icon: Layers3 },
-  { id: "bg", label: "Remove background", icon: Eraser, prompt: "Remove the background completely and leave the subject on a clean flat transparent-style neutral backdrop." },
+  { id: "bg", label: "Remove background", icon: Eraser, prompt: "Remove background" },
   { id: "relight", label: "Relight", icon: Sun, prompt: "Relight the scene with dramatic cinematic rim light; keep every person, pose and object identical." },
   { id: "upscale", label: "Upscale & enhance", icon: ArrowUpRight, prompt: "Upscale and enhance detail and sharpness; change nothing in the content." },
 ] as const;
@@ -53,7 +54,8 @@ export function LayerStudio({ onAsset }: { onAsset: (url: string, kind: "image" 
   }
 
   function pt(e: PointerEvent) {
-    const r = frame.current!.getBoundingClientRect();
+    const r = frame.current?.getBoundingClientRect();
+    if (!r) return { x: 0, y: 0 };
     return { x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)), y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)) };
   }
 
@@ -61,6 +63,11 @@ export function LayerStudio({ onAsset }: { onAsset: (url: string, kind: "image" 
     if (!current) return;
     setBusy(label); setError(null);
     try {
+      if (label === "bg") {
+        const url = await removeImageBackground(current);
+        setHistory((h) => [...h, { url, prompt: "Transparent background", plate: "Cutout" }]);
+        return;
+      }
       const plate = plates.find((p) => p.id === active);
       const locked = plates.filter((p) => p.locked).map((p) => p.name);
       const region = box ? `Only edit the region from ${Math.round(box.x * 100)}% left, ${Math.round(box.y * 100)}% top, ${Math.round(box.w * 100)}% wide, ${Math.round(box.h * 100)}% tall.` : "";
@@ -123,7 +130,7 @@ export function LayerStudio({ onAsset }: { onAsset: (url: string, kind: "image" 
                 onPointerDown={(e) => { const p = pt(e); drag.current = p; setBox({ ...p, w: 0, h: 0 }); (e.target as Element).setPointerCapture?.(e.pointerId); }}
                 onPointerMove={(e) => { if (!drag.current) return; const p = pt(e), s = drag.current; setBox({ x: Math.min(s.x, p.x), y: Math.min(s.y, p.y), w: Math.abs(p.x - s.x), h: Math.abs(p.y - s.y) }); }}
                 onPointerUp={() => { drag.current = null; setBox((b) => (b && b.w > 0.02 && b.h > 0.02 ? b : null)); }}>
-                <img src={current} alt="Layer frame" draggable={false} className="max-h-[60vh] rounded-md object-contain" />
+                <img src={current} alt="Layer frame" draggable={false} className="transparency-grid max-h-[60vh] rounded-md object-contain" />
                 {box && <div className="pointer-events-none absolute border-2 border-dashed border-primary bg-primary/10" style={{ left: `${box.x * 100}%`, top: `${box.y * 100}%`, width: `${box.w * 100}%`, height: `${box.h * 100}%` }} />}
                 {busy && <div className="absolute inset-0 grid place-items-center rounded-md bg-background/60"><Loader2 className="size-8 animate-spin text-primary" /></div>}
               </div>
@@ -139,8 +146,7 @@ export function LayerStudio({ onAsset }: { onAsset: (url: string, kind: "image" 
         ) : (
           <button onClick={() => file.current?.click()} className="flex flex-1 flex-col items-center justify-center gap-2 rounded-md border border-dashed border-border text-center">
             <Layers3 className="size-10 text-primary" />
-            <span className="text-lg font-bold">Turn flat images into editable layers</span>
-            <span className="max-w-sm text-xs text-muted-foreground">Drop any image, decompose it into up to 20 layers, then swap one element at a time — nothing else moves.</span>
+            <span className="text-lg font-bold">Layers studio</span>
           </button>
         )}
       </section>
@@ -152,7 +158,7 @@ export function LayerStudio({ onAsset }: { onAsset: (url: string, kind: "image" 
           <span className="font-mono text-[10px] text-muted-foreground">{plates.length || "—"}</span>
         </div>
         <div className="max-h-64 space-y-1 overflow-auto">
-          {plates.length === 0 && <p className="text-[11px] text-muted-foreground">Run Layer decomposition to split the frame.</p>}
+          {plates.length === 0 && <p className="text-[11px] text-muted-foreground">No edit targets yet.</p>}
           {plates.map((p) => (
             <div key={p.id} onClick={() => setActive(p.id)} className={cn("flex cursor-pointer items-center gap-2 rounded px-2 py-1.5 text-[11px]", active === p.id ? "bg-primary/20 text-primary" : "hover:bg-secondary")}>
               <button aria-label="Toggle visibility" onClick={(e) => { e.stopPropagation(); setPlates((ps) => ps.map((q) => q.id === p.id ? { ...q, visible: !q.visible } : q)); }}>
