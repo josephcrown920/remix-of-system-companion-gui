@@ -14,3 +14,5 @@
 - Reuse CreativeChat and CrewBoard between the opening screen and workspace; show submitted crew work as awaiting its report rather than inventing per-agent milestones.
 - Keep editor-session serialization in the shared editor-state module; browser uploads use temporary URLs and must never be persisted as session data.
 - Keep agent replies on the existing TanStack API route and forward streamed provider output as SSE; this preserves the HTTP boundary while enabling live updates and cancellation.
+- Apply browser-saved creative context through one shared prompt helper for chat and all generation surfaces; current instructions take precedence over saved preferences.
+- Load background segmentation only on a browser user action and retain its transparent PNG as a data URL; this avoids server-native dependencies and preserves cutouts in saved sessions.
