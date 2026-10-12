@@ -55,6 +55,14 @@ const SPECIALIST_BRIEFS = [
   { id: "fable", task: "Strengthen story clarity, emotion, and the ending." },
 ] as const;
 
+function arkMessage(raw: string) {
+  try {
+    const e = (JSON.parse(raw) as { error?: { code?: string; message?: string } }).error;
+    if (e?.code === "AccountOverdueError") return "Your ModelArk account has an overdue balance. Top it up in the BytePlus console to use ModelArk agents.";
+    return e?.message?.split(" Request id")[0] ?? raw.slice(0, 200);
+  } catch { return raw.slice(0, 200); }
+}
+
 function extractJson(text: string) {
   const m = text.match(/\{[\s\S]*\}/);
   if (!m) return { reply: text.slice(0, 400), steps: [], actions: [], crew: [] };
@@ -192,7 +200,7 @@ export const Route = createFileRoute("/api/agent")({
         let out: { text?: string; error?: string; status?: number };
         if (agent.id === "orchestrator") {
           const key = apiKey();
-          const modelArkAgents = AGENTS.filter((candidate) => candidate.available && candidate.api === "modelark" && candidate.model);
+          const modelArkAgents = AGENTS.filter((candidate) => candidate.available && candidate.api === "modelark" && candidate.model).slice(0, 3);
           const specialists = [
             ...SPECIALIST_BRIEFS.map((specialist) => ({ ...specialist, model: agentById(specialist.id).model, api: agentById(specialist.id).api })),
             ...modelArkAgents.map((specialist) => ({ id: specialist.id, task: specialist.role, model: specialist.model, api: specialist.api })),
@@ -229,7 +237,7 @@ export const Route = createFileRoute("/api/agent")({
         if (out.error) {
           const status = out.status ?? 500;
           const msg =
-            status === 401 && agent.api === "modelark" ? out.error
+            agent.api === "modelark" ? arkMessage(out.error)
             : status === 402 ? "The workspace is out of AI credits."
             : status === 429 ? "Rate limited — try again in a moment."
             : "The editor agent couldn't respond.";

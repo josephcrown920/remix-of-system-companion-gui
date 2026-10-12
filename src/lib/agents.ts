@@ -21,13 +21,15 @@ export const AGENTS: Agent[] = [
   { id: "gemini", name: "Gemini Omni", short: "GM", role: "Rush scanning · b-roll discovery", model: "google/gemini-3.8-flash", api: "openai", available: true, accent: "var(--chart-5)", provider: "Lovable AI" },
   { id: "sonnet", name: "Claude Sonnet", short: "SN", role: "Balanced everyday editing", model: "anthropic/claude-sonnet-5", api: "anthropic", available: true, accent: "var(--chart-2)", provider: "Lovable AI" },
   { id: "luna", name: "GPT-6 Luna", short: "LN", role: "Fast rough cuts · silence trims", model: "openai/gpt-6-luna", api: "openai", available: true, accent: "var(--chart-1)", provider: "Lovable AI" },
-  // ModelArk crew — live only when a ModelArk key is configured on the server.
-  { id: "ark-doubao", name: "Doubao Pro", short: "DB", role: "ModelArk · long-form assembly", model: "doubao-pro-32k", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
-  { id: "ark-seed", name: "Seed 1.6", short: "SD", role: "ModelArk · reasoning & shot logic", model: "doubao-seed-1-6", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
-  { id: "ark-skylark", name: "Skylark Lite", short: "SK", role: "ModelArk · fast trims", model: "skylark-lite", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
-  { id: "glm", name: "GLM", short: "GL", role: "Rapid assembly", available: false, accent: "var(--chart-2)", provider: "Not connected" },
-  { id: "deepseek", name: "DeepSeek", short: "DS", role: "Speech alignment · silence strip", available: false, accent: "var(--chart-4)", provider: "Not connected" },
-  { id: "dola", name: "Dola", short: "DL", role: "Motion & transition FX", available: false, accent: "var(--chart-5)", provider: "Not connected" },
+  // ModelArk crew — served with your ModelArk key.
+  { id: "ark-glm", name: "GLM 5.2", short: "GL", role: "ModelArk · rapid assembly", model: "glm-5-2-260617", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-glm-flash", name: "GLM 5.3 Flash", short: "GF", role: "ModelArk · instant trims", model: "glm-5-3-flash-260828", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-deepseek-pro", name: "DeepSeek V4 Pro", short: "DS", role: "ModelArk · speech alignment & logic", model: "deepseek-v4-pro-ga-260813", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-deepseek-flash", name: "DeepSeek V4.1 Flash", short: "DF", role: "ModelArk · fast silence strip", model: "deepseek-v4-1-flash-260910", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-seed-pro", name: "Seed 2.0 Pro", short: "SP", role: "ModelArk · reasoning & shot logic", model: "seed-2-0-pro-260328", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-seed-code", name: "Seed 2.0 Code", short: "SC", role: "ModelArk · precise edit lists", model: "seed-2-0-code-preview-260328", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-seed-lite", name: "Seed 2.0 Lite", short: "SL", role: "ModelArk · everyday edits", model: "seed-2-0-lite-260428", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
+  { id: "ark-dola", name: "Dola Seed 2.1 Turbo", short: "DL", role: "ModelArk · motion & transition FX", model: "dola-seed-2-1-turbo-260628", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
 ];
 
 export function agentById(id: string) {
