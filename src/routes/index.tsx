@@ -56,6 +56,7 @@ import {
 import { generateImage, generateVideo } from "@/lib/generate";
 import { renderTimeline, download } from "@/lib/export";
 import { NodeCanvas } from "@/components/NodeCanvas";
+import { LayerStudio } from "@/components/LayerStudio";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
@@ -127,7 +128,7 @@ function Editor() {
   const [busy, setBusy] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [mode, setMode] = useState<"start" | "edit" | "canvas">("start");
+  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
   const [vidEngine, setVidEngine] = useState(DEFAULT_VIDEO_ENGINE);
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
@@ -808,6 +809,18 @@ function Editor() {
             >
               Canvas
             </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setMode("layers")}
+              className={cn(
+                "rounded-md px-2.5 py-1 transition",
+                mode === "layers"
+                  ? "bg-primary/20 text-primary shadow-sm"
+                  : "text-muted-foreground hover:text-foreground",
+              )}
+            >
+              Layers
+            </Button>
           </div>
           <Button
             variant="ghost"
@@ -917,6 +930,10 @@ function Editor() {
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
+        </main>
+      ) : mode === "layers" ? (
+        <main className="flex-1 p-2 sm:p-3">
+          <LayerStudio onAsset={addAsset} />
         </main>
       ) : (
         <main className="grid flex-1 gap-2 p-2 sm:gap-3 sm:p-3 lg:grid-cols-[290px_minmax(0,1fr)_260px] lg:grid-rows-[minmax(320px,1fr)_minmax(260px,0.8fr)]">
