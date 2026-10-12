@@ -2,6 +2,8 @@
 export type Engine = {
   id: string;
   name: string;
+  /** "ark" = served by ModelArk with the user's key. */
+  provider?: "ark";
   /** Gateway model id. Undefined when the engine is not served on this workspace. */
   model?: string;
   note: string;
@@ -10,8 +12,10 @@ export type Engine = {
 
 /** Image engines. Seedream is the requested default but is not served by the gateway. */
 export const IMAGE_ENGINES: Engine[] = [
-  { id: "seedream", name: "Seedream", note: "Not served on this workspace yet", available: false },
-  { id: "sunburst", name: "GPT Image 2.5 Sunburst", model: "openai/gpt-image-2.5-sunburst", note: "Default · photoreal plates & edits", available: true },
+  { id: "seedream5pro", name: "Seedream 5.0 Pro", model: "dola-seedream-5-0-pro-260628", provider: "ark", note: "ModelArk · top quality, up to 4K", available: true },
+  { id: "seedream5", name: "Seedream 5.0", model: "seedream-5-0-260128", provider: "ark", note: "ModelArk · photoreal plates & edits", available: true },
+  { id: "seedream45", name: "Seedream 4.5", model: "seedream-4-5-251128", provider: "ark", note: "ModelArk · fast plates", available: true },
+  { id: "sunburst", name: "GPT Image 2.5 Sunburst", model: "openai/gpt-image-2.5-sunburst", note: "Photoreal plates & edits", available: true },
   { id: "flare", name: "GPT Image 2.5 Flare", model: "openai/gpt-image-2.5-flare", note: "Faster, lighter plates", available: true },
   { id: "gemini3pro", name: "Gemini 3 Pro Image", model: "google/gemini-3-pro-image", note: "Strong typography & composition", available: true },
   { id: "gemini31", name: "Gemini 3.1 Flash Image", model: "google/gemini-3.1-flash-image", note: "Fast iteration", available: true },
@@ -19,15 +23,18 @@ export const IMAGE_ENGINES: Engine[] = [
 
 /** Video engines. Seedance is the requested default but is not served by the gateway. */
 export const VIDEO_ENGINES: Engine[] = [
-  { id: "seedance", name: "Seedance", note: "Not served on this workspace yet", available: false },
+  { id: "seedance25", name: "Seedance 2.5", model: "dreamina-seedance-2-5-260628", provider: "ark", note: "ModelArk · best motion, image-to-video", available: true },
+  { id: "seedance2", name: "Seedance 2.0", model: "dreamina-seedance-2-0-260128", provider: "ark", note: "ModelArk · multimodal video", available: true },
+  { id: "seedance2fast", name: "Seedance 2.0 Fast", model: "dreamina-seedance-2-0-fast-260128", provider: "ark", note: "ModelArk · quick drafts", available: true },
+  { id: "seedance1pro", name: "Seedance 1.0 Pro", model: "seedance-1-0-pro-250528", provider: "ark", note: "ModelArk · text & image to video", available: true },
   { id: "veo31", name: "Veo 3.1", model: "google/veo-3.1", note: "Best motion fidelity", available: true },
-  { id: "veo31fast", name: "Veo 3.1 Fast", model: "google/veo-3.1-fast", note: "Default · quick motion clips", available: true },
+  { id: "veo31fast", name: "Veo 3.1 Fast", model: "google/veo-3.1-fast", note: "Quick motion clips", available: true },
   { id: "veo31lite", name: "Veo 3.1 Lite", model: "google/veo-3.1-lite", note: "Cheapest drafts", available: true },
   { id: "omni", name: "Gemini Omni 1.1", model: "google/gemini-omni-1.1-flash", note: "Image-to-video & continuation", available: true },
 ];
 
-export const DEFAULT_IMAGE_ENGINE = "sunburst";
-export const DEFAULT_VIDEO_ENGINE = "veo31fast";
+export const DEFAULT_IMAGE_ENGINE = "seedream5";
+export const DEFAULT_VIDEO_ENGINE = "seedance2fast";
 
 export function engineModel(list: Engine[], id: string) {
   return list.find((e) => e.id === id && e.available)?.model;
