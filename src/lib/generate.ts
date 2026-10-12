@@ -1,4 +1,5 @@
 /** Browser helpers that call the app's own generation endpoints. */
+import { withCreativeContext } from "@/lib/creative-context";
 
 async function fileToMedia(file: Blob) {
   const buf = new Uint8Array(await file.arrayBuffer());
@@ -20,6 +21,7 @@ function errMsg(d: unknown, fallback: string) {
 
 /** Generate an image, or edit `source` by prompt when given. Returns a displayable URL. */
 export async function generateImage(prompt: string, engine: string, source?: Blob): Promise<string> {
+  prompt = withCreativeContext(prompt);
   let r: Response;
   if (source) {
     const form = new FormData();
@@ -46,7 +48,7 @@ export async function generateVideo(
   motion: string,
   opts: { image?: Blob | undefined; duration?: string; onStatus?: (s: string) => void } = {},
 ): Promise<string> {
-  const body: Record<string, unknown> = { prompt, engine, motion, duration: opts.duration ?? "6s" };
+  const body: Record<string, unknown> = { prompt: withCreativeContext(prompt), engine, motion, duration: opts.duration ?? "6s" };
   if (opts.image) body["image"] = await fileToMedia(opts.image);
   const r = await fetch("/api/video", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const job = (await r.json().catch(() => ({}))) as { id?: string; status?: string };

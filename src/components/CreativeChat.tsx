@@ -52,48 +52,28 @@ export const DIRECTING_STYLES = [
 export function CrewBoard({ crew, busy }: { crew: CrewRun[]; busy: boolean }) {
   const planned: CrewRun[] = [
     { name: "GPT-6 Astra", task: "Creative direction", status: "queued" },
-    { name: "Claude Codex", task: "Precision cuts", status: "queued" },
+    { name: "Claude Codex", task: "Precision & assembly", status: "queued" },
     { name: "Claude Fable", task: "Story & emotion", status: "queued" },
-    { name: "ModelArk", task: "Requires connection", status: "skipped" },
+    { name: "ModelArk specialists", task: "GLM · DeepSeek · Seed", status: "queued" },
   ];
   return (
-    <div className="border-t border-border pt-4">
-      <div className="mb-3 flex items-center justify-between">
-        <span className="text-xs font-semibold">Creative crew</span>
-        <span className="font-mono text-[10px] text-muted-foreground">
-          {busy ? "Dispatching" : crew.length ? "Pass complete" : "Standby"}
-        </span>
+    <section className="crew-board border-t border-border pt-5">
+      <div className="mb-4 flex items-center justify-between gap-2">
+        <span className="text-xs font-semibold">Your creative crew</span>
+        <span className="font-mono text-[9px] uppercase text-muted-foreground">{busy ? "Awaiting crew report" : crew.length ? "Crew report" : "On standby"}</span>
       </div>
-      <div className="grid grid-cols-2 gap-2">
-        {(crew.length ? crew : planned).map((run) => (
-          <div
-            key={run.name}
-            className="flex min-w-0 items-start gap-2 rounded-md border border-border bg-card p-2.5"
-          >
-            {run.status === "complete" ? (
-              <CheckCircle2 className="mt-0.5 size-3.5 shrink-0 text-accent" />
-            ) : run.status === "working" ? (
-              <Loader2 className="mt-0.5 size-3.5 shrink-0 animate-spin text-primary" />
-            ) : run.status === "failed" ? (
-              <AlertCircle className="mt-0.5 size-3.5 shrink-0 text-destructive" />
-            ) : (
-              <CircleDashed className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
-            )}
-            <div className="min-w-0">
-              <p className="text-[11px] font-semibold">{run.name}</p>
-              <p className="mt-0.5 text-[10px] text-muted-foreground">{run.task}</p>
-              <p className="mt-1 font-mono text-[9px] capitalize text-muted-foreground">
-                {run.status === "queued"
-                  ? "Ready"
-                  : run.status === "working"
-                    ? "Awaiting crew report"
-                    : run.status}
-              </p>
-            </div>
+      <div className="grid grid-cols-1 gap-x-5 sm:grid-cols-2">
+        {(crew.length ? crew : planned).map((run, i) => (
+          <div key={run.name} className="grid min-w-0 grid-cols-[32px_minmax(0,1fr)_16px] items-center gap-3 border-b border-border py-3">
+            <span className={cn("crew-monogram grid size-8 place-items-center rounded-md font-mono text-[10px] font-semibold", i % 3 === 0 ? "bg-primary/15 text-primary" : i % 3 === 1 ? "bg-accent/15 text-accent" : "bg-destructive/15 text-destructive")}>{run.name.includes("Astra") ? "AS" : run.name.includes("Codex") ? "CX" : run.name.includes("Fable") ? "FB" : "MK"}</span>
+            <div className="min-w-0"><p className="truncate text-[11px] font-semibold">{run.name}</p><p className="mt-1 truncate text-[10px] text-muted-foreground">{run.task}</p></div>
+            <span title={run.status === "queued" ? "Standby" : run.status}>
+              {run.status === "complete" ? <CheckCircle2 className="size-3.5 text-accent" /> : run.status === "working" ? <Loader2 className="size-3.5 animate-spin text-primary" /> : run.status === "failed" ? <AlertCircle className="size-3.5 text-destructive" /> : <CircleDashed className="size-3.5 text-muted-foreground" />}
+            </span>
           </div>
         ))}
       </div>
-    </div>
+    </section>
   );
 }
 

@@ -1,4 +1,7 @@
 # Roadmap
+- [x] Redesign opening screen and creative crew using selected uploaded artwork
+- [x] Add automatically applied browser-saved creative context across agents and generation
+- [ ] Verify transparent background removal in Layers and gallery
 - [x] Match the supplied cinematic opening cover in black and enable real live reply streaming
 - [ ] Connect the existing private generations bucket to a signed-in persistent gallery
 - [x] Apply all-black gradient theme and chat-first startup with empty media and timeline

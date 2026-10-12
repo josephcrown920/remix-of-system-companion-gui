@@ -61,6 +61,9 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
 import { StudioCover } from "@/components/StudioCover";
+import { CreativeContext } from "@/components/CreativeContext";
+import { withCreativeContext } from "@/lib/creative-context";
+import { removeImageBackground } from "@/lib/remove-background";
 import { readSse } from "@/lib/agent-stream";
 import {
   clipForAsset,
@@ -139,6 +142,8 @@ function Editor() {
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [sessionName, setSessionName] = useState("Untitled cut");
   const [crew, setCrew] = useState<CrewRun[]>([]);
+  const [cutoutBusy, setCutoutBusy] = useState<string | null>(null);
+  const [cutoutError, setCutoutError] = useState("");
   const laneRef = useRef<HTMLDivElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -435,6 +440,18 @@ function Editor() {
     ]);
   }
 
+  async function makeCutout(asset: Asset) {
+    if (cutoutBusy || asset.kind !== "image") return;
+    setCutoutBusy(asset.id);
+    setCutoutError("");
+    try {
+      const url = await removeImageBackground(asset.url);
+      addAsset(url, "image", `${asset.name.replace(/\.[^.]+$/, "")}_cutout.png`, true);
+    } catch (error) {
+      setCutoutError(error instanceof Error ? error.message : "Background removal failed.");
+    } finally { setCutoutBusy(null); }
+  }
+
   async function exportVideo() {
     if (!clips.length || exporting) return;
     setPlaying(false);
@@ -639,7 +656,7 @@ function Editor() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           agent,
-          brief: `${t}\n\nDIRECTING STYLE: ${DIRECTING_STYLES.find((style) => style.id === directingStyle)?.brief ?? "Follow the user’s vision."}`,
+          brief: withCreativeContext(`${t}\n\nDIRECTING STYLE: ${DIRECTING_STYLES.find((style) => style.id === directingStyle)?.brief ?? "Follow the user’s vision."}`),
           history: msgs.slice(-8).map((m) => ({ role: m.role, text: m.text })),
           assets: assets.map((a) => ({ id: a.id, name: a.name, kind: a.kind, dur: a.dur })),
           clips: clips.map((c) => ({
@@ -705,8 +722,8 @@ function Editor() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
       {/* top bar */}
-      <header className="sticky top-0 z-50 flex h-12 items-center justify-between gap-2 border-b border-border bg-card/75 px-3 backdrop-blur-2xl sm:px-4">
-        <div className="flex items-center gap-2">
+      <header className="sticky top-0 z-50 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card/75 px-3 py-1.5 backdrop-blur-2xl sm:flex sm:justify-between sm:px-4">
+        <div className="flex min-w-0 items-center gap-2">
           <input
             aria-label="Session name"
             value={sessionName}
@@ -748,7 +765,7 @@ function Editor() {
           >
             <Save className="size-3.5" />
           </Button>
-          <span className="flex items-center gap-1.5" aria-hidden="true">
+          <span className="hidden items-center gap-1.5 md:flex" aria-hidden="true">
             <i className="size-2.5 rounded-full bg-destructive" />
             <i className="size-2.5 rounded-full bg-chart-5" />
             <i className="size-2.5 rounded-full bg-chart-3" />
@@ -756,7 +773,7 @@ function Editor() {
           <div className="ml-1 grid size-6 place-items-center rounded-md glass-control text-primary">
             <Clapperboard className="size-3.5" />
           </div>
-          <span className="font-display text-sm font-bold">REEL</span>
+          <span className="hidden font-display text-sm font-bold sm:inline">REEL</span>
           <span className="hidden font-mono text-[9px] uppercase text-muted-foreground md:inline">
             AI creative studio
           </span>
@@ -826,7 +843,7 @@ function Editor() {
             variant="ghost"
             onClick={() => void exportVideo()}
             disabled={exporting || !clips.length}
-            className="flex items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40"
+            className="hidden items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40 sm:flex"
           >
             {exporting ? (
               <Loader2 className="size-3.5 animate-spin" />
@@ -911,6 +928,7 @@ function Editor() {
           }}
         >
           <CreativeChat messages={msgs} brief={brief} setBrief={setBrief} busy={busy} send={send} onAttach={(f) => void ingest(f)} references={assets.map((a) => a.name)} spacious />
+          <div className="mt-5"><CreativeContext /></div>
           <div className="my-5 flex flex-wrap items-center gap-2">
             <label htmlFor="directing-style" className="mr-1 text-xs text-muted-foreground">Direction</label>
             <select
@@ -1105,7 +1123,7 @@ function Editor() {
                       ) : a.kind === "video" ? (
                         <video src={a.url} muted className="h-full w-full object-cover" />
                       ) : (
-                        <img src={a.url} alt="" className="h-full w-full object-cover" />
+                        <img src={a.url} alt={a.name} className="transparency-grid h-full w-full object-cover" />
                       )}
                     </div>
                     <div className="flex items-center gap-1 p-1.5">
@@ -1123,6 +1141,7 @@ function Editor() {
                       >
                         <Plus className="size-3.5" />
                       </Button>
+                      {a.kind === "image" && <Button variant="ghost" size="icon" className="size-6 shrink-0" aria-label={`Remove background from ${a.name}`} title="Remove background" disabled={!!cutoutBusy} onClick={() => void makeCutout(a)}>{cutoutBusy === a.id ? <Loader2 className="size-3 animate-spin" /> : <Scissors className="size-3" />}</Button>}
                     </div>
                   </div>
                 ))}
@@ -1137,6 +1156,7 @@ function Editor() {
                 </p>
               )}
             </div>
+            {cutoutError && <p role="alert" className="text-xs text-destructive">{cutoutError}</p>}
           </section>
 
           {/* monitor + timeline */}
@@ -1375,6 +1395,7 @@ function Editor() {
                   busy={busy}
                   send={send} onAttach={(f) => void ingest(f)} references={assets.map((a) => a.name)}
                 />
+                <CreativeContext />
                 <select
                   aria-label="Directing style"
                   value={directingStyle}
