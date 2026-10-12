@@ -1,5 +1,5 @@
-import { useEffect, useRef } from "react";
-import { Paperclip, Clapperboard, CheckCircle2, Loader2, AlertCircle, CircleDashed } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import { Paperclip, Clapperboard, CheckCircle2, Loader2, AlertCircle, CircleDashed, Mic, MicOff } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Conversation,
@@ -118,6 +118,24 @@ export function CreativeChat({
 }) {
   const fileInput = useRef<HTMLInputElement>(null);
   const textarea = useRef<HTMLTextAreaElement>(null);
+  const [listening, setListening] = useState(false);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const rec = useRef<any>(null);
+  function toggleMic() {
+    if (listening) { rec.current?.stop(); return; }
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const w = window as any;
+    const SR = w.SpeechRecognition ?? w.webkitSpeechRecognition;
+    if (!SR) { alert("Voice input isn't supported in this browser. Try Chrome or Safari."); return; }
+    const r = new SR();
+    r.continuous = true; r.interimResults = true;
+    const base = brief ? brief + " " : "";
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    r.onresult = (e: any) => setBrief(base + Array.from(e.results).map((x: any) => x[0].transcript).join(""));
+    r.onend = () => setListening(false);
+    r.onerror = () => setListening(false);
+    rec.current = r; r.start(); setListening(true);
+  }
   useEffect(() => {
     if (!busy) textarea.current?.focus();
   }, [busy]);
@@ -167,6 +185,9 @@ export function CreativeChat({
         />
         <PromptInputFooter>
           <span className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
+            <Button type="button" variant="ghost" size="icon" className={cn("size-7", listening && "text-primary")} aria-pressed={listening} aria-label={listening ? "Stop dictation" : "Speak your brief"} title="Voice input" onClick={toggleMic}>
+              {listening ? <MicOff className="size-3.5" /> : <Mic className="size-3.5" />}
+            </Button>
             {onAttach && (
               <>
                 <input ref={fileInput} type="file" multiple accept="image/*,video/*,audio/*" className="hidden" aria-label="Reference files" onChange={(e) => { onAttach(e.target.files); e.target.value = ""; }} />
