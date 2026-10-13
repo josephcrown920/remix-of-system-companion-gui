@@ -1,4 +1,5 @@
 # Roadmap
+- [ ] Restore original Aurora Layers app appearance and full integrated editing workspace
 - [x] Redesign opening screen and creative crew using selected uploaded artwork
 - [x] Add automatically applied browser-saved creative context across agents and generation
 - [ ] Verify transparent background removal in Layers and gallery

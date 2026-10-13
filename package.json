@@ -61,6 +61,7 @@
     "embla-carousel-react": "^8.6.0",
     "eventsource-parser": "^4.1.1",
     "input-otp": "^1.4.2",
+    "jszip": "^3.10.2",
     "lucide-react": "^0.575.0",
     "motion": "^14.0.0",
     "nanoid": "^6.0.1",
