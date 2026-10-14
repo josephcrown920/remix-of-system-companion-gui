@@ -55,6 +55,8 @@ import {
 } from "@/lib/engines";
 import { generateImage, generateVideo } from "@/lib/generate";
 import { renderTimeline, download } from "@/lib/export";
+import { isDraftMode, setDraftMode } from "@/lib/generate";
+import { LipSync } from "@/components/LipSync";
 import { NodeCanvas } from "@/components/NodeCanvas";
 import { LayerStudio } from "@/components/LayerStudio";
 import { cn } from "@/lib/utils";
@@ -136,6 +138,8 @@ function Editor() {
   const [vidEngine, setVidEngine] = useState(DEFAULT_VIDEO_ENGINE);
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
   const [exporting, setExporting] = useState(false);
+  const [draftMode, setDraft] = useState(false);
+  useEffect(() => { setDraft(isDraftMode()); }, []);
   const [exportPct, setExportPct] = useState(0);
   const [mediaView, setMediaView] = useState<"media" | "generations">("media");
   const [sideView, setSideView] = useState<"director" | "adjust">("director");
@@ -474,13 +478,13 @@ function Editor() {
         duration,
         setExportPct,
       );
-      download(blob, "reel-edit.webm");
+      download(blob, blob.type.includes("mp4") ? "reel-edit.mp4" : "reel-edit.webm");
       setMsgs((m) => [
         ...m,
         {
           role: "assistant",
           agent,
-          text: "Exported your cut as a WebM file — check your downloads.",
+          text: `Exported your finished video (${blob.type.includes("mp4") ? "MP4" : "WebM"}) — check your downloads.`,
         },
       ]);
     } catch {
@@ -839,6 +843,15 @@ function Editor() {
               Layers
             </Button>
           </div>
+          <LipSync onDone={(url) => addAsset(url, "video", "lip-sync.mp4", true)} />
+          <Button
+            variant="ghost"
+            onClick={() => { const n = !draftMode; setDraftMode(n); setDraft(n); }}
+            title="Draft mode: fast 480p, 4-second previews"
+            className={cn("hidden rounded-md border px-2.5 py-1.5 text-xs font-bold sm:flex", draftMode ? "border-primary text-primary" : "border-border text-muted-foreground")}
+          >
+            Draft {draftMode ? "on" : "off"}
+          </Button>
           <Button
             variant="ghost"
             onClick={() => void exportVideo()}

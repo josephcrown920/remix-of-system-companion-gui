@@ -42,11 +42,11 @@ export async function renderTimeline(
 
   const stream = canvas.captureStream(30);
   dest.stream.getAudioTracks().forEach((t) => stream.addTrack(t));
-  const mime = ["video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
+  const mime = ["video/mp4;codecs=avc1,mp4a.40.2", "video/mp4", "video/webm;codecs=vp9,opus", "video/webm;codecs=vp8,opus", "video/webm"].find((m) => MediaRecorder.isTypeSupported(m)) ?? "video/webm";
   const rec = new MediaRecorder(stream, { mimeType: mime, videoBitsPerSecond: 6_000_000 });
   const chunks: Blob[] = [];
   rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
-  const done = new Promise<Blob>((res) => { rec.onstop = () => res(new Blob(chunks, { type: "video/webm" })); });
+  const done = new Promise<Blob>((res) => { rec.onstop = () => res(new Blob(chunks, { type: mime.split(";")[0] ?? "video/webm" })); });
 
   const order = ["V1", "V2", "V3"];
   const active = new Set<HTMLMediaElement>();

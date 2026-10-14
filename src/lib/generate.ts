@@ -1,6 +1,15 @@
 /** Browser helpers that call the app's own generation endpoints. */
 import { withCreativeContext } from "@/lib/creative-context";
 
+const DRAFT_KEY = "reel-draft-mode";
+/** Draft mode: quick low-res, short preview renders. */
+export function isDraftMode() {
+  return typeof localStorage !== "undefined" && localStorage.getItem(DRAFT_KEY) === "1";
+}
+export function setDraftMode(on: boolean) {
+  localStorage.setItem(DRAFT_KEY, on ? "1" : "0");
+}
+
 async function fileToMedia(file: Blob) {
   const buf = new Uint8Array(await file.arrayBuffer());
   let bin = "";
@@ -46,10 +55,12 @@ export async function generateVideo(
   prompt: string,
   engine: string,
   motion: string,
-  opts: { image?: Blob | undefined; duration?: string; onStatus?: (s: string) => void } = {},
+  opts: { image?: Blob | undefined; audio?: Blob | undefined; duration?: string; onStatus?: (s: string) => void } = {},
 ): Promise<string> {
-  const body: Record<string, unknown> = { prompt: withCreativeContext(prompt), engine, motion, duration: opts.duration ?? "6s" };
+  const draft = isDraftMode();
+  const body: Record<string, unknown> = { prompt: withCreativeContext(prompt), engine, motion, duration: draft ? "4s" : opts.duration ?? "6s", draft };
   if (opts.image) body["image"] = await fileToMedia(opts.image);
+  if (opts.audio) body["audio"] = await fileToMedia(opts.audio);
   const r = await fetch("/api/video", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const job = (await r.json().catch(() => ({}))) as { id?: string; status?: string };
   if (!r.ok || !job.id) throw new Error(errMsg(job, "The video service rejected the request."));
