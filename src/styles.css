@@ -67,20 +67,20 @@
 
 :root {
   --radius: 0.625rem;
-  --background: oklch(0 0 0);
-  --foreground: oklch(0.94 0.005 285);
-  --card: oklch(0.14 0 0 / 88%);
+  --background: oklch(0.105 0.012 278);
+  --foreground: oklch(0.94 0.008 278);
+  --card: oklch(0.155 0.012 278 / 94%);
   --card-foreground: var(--foreground);
-  --popover: oklch(0.17 0 0 / 98%);
+  --popover: oklch(0.18 0.014 278 / 98%);
   --popover-foreground: var(--foreground);
-  --primary: oklch(0.65 0.19 300);
+  --primary: oklch(0.72 0.16 298);
   --primary-foreground: oklch(0.99 0.004 285);
-  --secondary: oklch(0.21 0 0 / 90%);
+  --secondary: oklch(0.205 0.014 278 / 92%);
   --secondary-foreground: var(--foreground);
-  --muted: oklch(0.18 0 0 / 85%);
-  --muted-foreground: oklch(0.68 0.008 285);
-  --accent: oklch(0.78 0.13 82);
-  --accent-foreground: oklch(0.25 0.04 75);
+  --muted: oklch(0.19 0.012 278 / 88%);
+  --muted-foreground: oklch(0.7 0.015 278);
+  --accent: oklch(0.79 0.12 82);
+  --accent-foreground: oklch(0.22 0.035 75);
   --destructive: oklch(0.63 0.22 25);
   --destructive-foreground: oklch(0.98 0 0);
   --border: oklch(0.95 0 0 / 13%);
@@ -130,6 +130,11 @@
     cursor: pointer;
   }
 
+  :focus-visible {
+    outline: 2px solid color-mix(in oklab, var(--accent) 82%, white);
+    outline-offset: 3px;
+  }
+
   ::selection {
     background: color-mix(in oklab, var(--primary) 42%, transparent);
   }
@@ -176,8 +181,13 @@
   animation: rise 0.5s ease both;
 }
 @media (max-width: 640px) {
-  .cover-title { font-size: 34px; }
-  .cover-intro { min-height: 430px; padding-top: 44px; }
+  .cover-title {
+    font-size: 34px;
+  }
+  .cover-intro {
+    min-height: 430px;
+    padding-top: 44px;
+  }
 }
 
 header::before {
@@ -230,25 +240,750 @@ header::before {
 
 /* Cinematic opening and transparent editing surface. */
 :root {
-  --cover-overlay: linear-gradient(90deg, oklch(0 0 0 / 92%) 0%, oklch(0 0 0 / 76%) 32%, oklch(0 0 0 / 8%) 72%), linear-gradient(0deg, var(--background), transparent 22%);
+  --cover-overlay:
+    linear-gradient(90deg, oklch(0 0 0 / 92%) 0%, oklch(0 0 0 / 76%) 32%, oklch(0 0 0 / 8%) 72%),
+    linear-gradient(0deg, var(--background), transparent 22%);
   --image-overlay: linear-gradient(0deg, oklch(0 0 0 / 88%), transparent 60%);
   --checker-light: oklch(0.28 0 0);
-  --checker-dark: oklch(0.20 0 0);
+  --checker-dark: oklch(0.2 0 0);
 }
-.cover-scene { min-height: 500px; height: min(570px, 66svh); }
-.cover-photo { object-position: 75% 32%; }
-.cover-shade { background: var(--cover-overlay); }
-.cover-copy { padding-top: 70px; padding-bottom: 48px; }
-.inspiration-shade { background: var(--image-overlay); }
+.cover-scene {
+  min-height: 500px;
+  height: min(570px, 66svh);
+}
+.cover-photo {
+  object-position: 75% 32%;
+}
+.cover-shade {
+  background: var(--cover-overlay);
+}
+.cover-copy {
+  padding-top: 70px;
+  padding-bottom: 48px;
+}
+.inspiration-shade {
+  background: var(--image-overlay);
+}
 .transparency-grid {
   background-color: var(--checker-light);
-  background-image: conic-gradient(var(--checker-dark) 25%, transparent 0 50%, var(--checker-dark) 0 75%, transparent 0);
+  background-image: conic-gradient(
+    var(--checker-dark) 25%,
+    transparent 0 50%,
+    var(--checker-dark) 0 75%,
+    transparent 0
+  );
   background-size: 16px 16px;
 }
 @media (max-width: 640px) {
-  .cover-scene { min-height: 430px; height: 56svh; }
-  .cover-copy { padding-top: 48px; }
-  .cover-copy h1 { font-size: 42px; }
-  .cover-photo { object-position: 60% 30%; }
-  .cover-shade { background: linear-gradient(90deg, oklch(0 0 0 / 88%), oklch(0 0 0 / 40%)), linear-gradient(0deg, var(--background), transparent 35%); }
+  .cover-scene {
+    min-height: 430px;
+    height: 56svh;
+  }
+  .cover-copy {
+    padding-top: 48px;
+  }
+  .cover-copy h1 {
+    font-size: 42px;
+  }
+  .cover-photo {
+    object-position: 60% 30%;
+  }
+  .cover-shade {
+    background:
+      linear-gradient(90deg, oklch(0 0 0 / 88%), oklch(0 0 0 / 40%)),
+      linear-gradient(0deg, var(--background), transparent 35%);
+  }
+}
+
+/* Art-directed welcome screen: actual sample frames, with the edit workflow drawn over them. */
+body {
+  background-image:
+    radial-gradient(ellipse at 12% -12%, oklch(0.31 0.07 296 / 18%), transparent 36rem),
+    linear-gradient(180deg, oklch(0.12 0.014 278), var(--background) 48rem);
+  background-attachment: fixed;
+}
+
+.studio-header {
+  min-width: 0;
+  border-bottom-color: color-mix(in oklab, var(--border) 72%, transparent);
+}
+
+.studio-header-tools {
+  max-width: 100%;
+}
+
+.studio-mode-nav {
+  gap: 1px;
+}
+
+.studio-mode-nav button {
+  min-width: 2rem;
+  justify-content: center;
+}
+
+.cover-scene {
+  min-height: 600px;
+  height: min(760px, 76svh);
+  background: oklch(0.1 0.01 278);
+}
+
+.cover-photo {
+  object-position: 54% 52%;
+  animation: cover-drift 28s ease-in-out infinite alternate;
+}
+
+.cover-shade {
+  background:
+    linear-gradient(
+      90deg,
+      oklch(0.055 0.012 278 / 94%) 0%,
+      oklch(0.055 0.012 278 / 82%) 38%,
+      oklch(0.055 0.012 278 / 24%) 72%,
+      oklch(0.055 0.012 278 / 10%) 100%
+    ),
+    linear-gradient(0deg, oklch(0.08 0.012 278 / 84%) 0%, transparent 34%);
+}
+
+.cover-copy {
+  padding-top: clamp(3.75rem, 9vh, 7rem);
+  padding-bottom: 1.5rem;
+}
+
+.cover-heading {
+  animation: rise 0.65s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.cover-title,
+.cover-copy h1 {
+  text-wrap: balance;
+}
+
+.cover-word {
+  background: linear-gradient(105deg, var(--accent), oklch(0.9 0.08 72) 54%, oklch(0.72 0.16 298));
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.cover-index {
+  border: 1px solid oklch(1 0 0 / 16%);
+  background: oklch(0.06 0.01 278 / 36%);
+  padding: 0.5rem 0.65rem;
+  backdrop-filter: blur(12px);
+}
+
+.cover-index span {
+  color: var(--accent);
+}
+
+.cover-filmstrip {
+  width: min(760px, 70%);
+  border: 1px solid oklch(1 0 0 / 18%);
+  border-radius: 0.8rem;
+  background: oklch(0.07 0.01 278 / 68%);
+  padding: 0.7rem 0.85rem;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 22px 60px -36px oklch(0 0 0 / 90%);
+}
+
+.filmstrip-copy {
+  flex: 1 0 128px;
+}
+
+.filmstrip-frames {
+  flex: 0 0 auto;
+}
+
+.filmstrip-frame {
+  position: relative;
+  width: 54px;
+  aspect-ratio: 1.33;
+  overflow: hidden;
+  border: 1px solid oklch(1 0 0 / 18%);
+  border-radius: 0.3rem;
+  background: var(--muted);
+}
+
+.filmstrip-frame img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.filmstrip-frame span {
+  position: absolute;
+  right: 3px;
+  bottom: 2px;
+  font:
+    8px/1 "JetBrains Mono",
+    monospace;
+  color: white;
+  text-shadow: 0 1px 4px black;
+}
+
+.filmstrip-timeline {
+  position: relative;
+  display: grid;
+  width: clamp(80px, 14vw, 150px);
+  gap: 4px;
+  padding: 4px 0;
+}
+
+.filmstrip-track {
+  display: flex;
+  height: 7px;
+  gap: 3px;
+}
+
+.filmstrip-track i {
+  display: block;
+  flex: 1;
+  border-radius: 2px;
+  background: color-mix(in oklab, var(--primary) 70%, transparent);
+}
+
+.filmstrip-track i:nth-child(2) {
+  background: color-mix(in oklab, var(--accent) 72%, transparent);
+}
+
+.filmstrip-track--audio {
+  width: 72%;
+  height: 4px;
+}
+
+.filmstrip-track--audio i {
+  background: color-mix(in oklab, oklch(0.67 0.16 185) 70%, transparent);
+}
+
+.filmstrip-playhead {
+  position: absolute;
+  inset: 0 auto 0 58%;
+  width: 1px;
+  background: var(--accent);
+  box-shadow: 0 0 8px color-mix(in oklab, var(--accent) 70%, transparent);
+  animation: filmstrip-scan 4s ease-in-out infinite alternate;
+}
+
+.workflow-showcase {
+  position: relative;
+}
+
+.workflow-heading {
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 1.15rem;
+}
+
+.workflow-heading h2 {
+  text-wrap: balance;
+}
+
+.feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.feature-card {
+  min-width: 0;
+  overflow: hidden;
+  border: 1px solid color-mix(in oklab, var(--border) 82%, transparent);
+  border-radius: 0.8rem;
+  background: linear-gradient(
+    150deg,
+    color-mix(in oklab, var(--card) 96%, white 4%),
+    color-mix(in oklab, var(--background) 96%, var(--primary) 4%)
+  );
+  box-shadow:
+    0 14px 34px -30px oklch(0 0 0 / 80%),
+    inset 0 1px 0 oklch(1 0 0 / 3%);
+  transition:
+    border-color 220ms ease,
+    transform 220ms ease,
+    box-shadow 220ms ease;
+}
+
+.feature-card:hover {
+  transform: translateY(-3px);
+  border-color: color-mix(in oklab, var(--primary) 52%, var(--border));
+  box-shadow: 0 24px 42px -34px color-mix(in oklab, var(--primary) 42%, transparent);
+}
+
+.feature-media {
+  position: relative;
+  overflow: hidden;
+  aspect-ratio: 1.56;
+  background: var(--muted);
+}
+
+.feature-media > img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition:
+    transform 700ms cubic-bezier(0.2, 0.7, 0.2, 1),
+    filter 350ms ease;
+}
+
+.feature-card:hover .feature-media > img {
+  transform: scale(1.035);
+}
+
+.feature-card--portrait .feature-media > img {
+  object-position: 44% 42%;
+}
+
+.feature-card--flow .feature-media > img {
+  object-position: 50% 48%;
+}
+
+.feature-card--layers .feature-media > img {
+  object-position: 46% 48%;
+}
+
+.feature-media-vignette {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    oklch(0 0 0 / 24%),
+    transparent 28%,
+    transparent 48%,
+    oklch(0 0 0 / 54%)
+  );
+  pointer-events: none;
+}
+
+.feature-number {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.75rem;
+  font:
+    9px/1 "JetBrains Mono",
+    monospace;
+  letter-spacing: 0.12em;
+  color: white;
+}
+
+.feature-number span {
+  color: oklch(1 0 0 / 60%);
+}
+
+.feature-prompt,
+.flow-overlay,
+.layer-overlay {
+  position: absolute;
+  z-index: 1;
+  right: 0.7rem;
+  bottom: 0.7rem;
+  left: 0.7rem;
+  border: 1px solid oklch(1 0 0 / 21%);
+  border-radius: 0.48rem;
+  background: oklch(0.08 0.012 278 / 78%);
+  color: oklch(0.96 0.008 278);
+  backdrop-filter: blur(14px);
+  box-shadow: 0 12px 28px -20px oklch(0 0 0 / 90%);
+}
+
+.feature-prompt {
+  display: flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.62rem 0.7rem;
+  font-size: 10px;
+  line-height: 1.4;
+}
+
+.feature-prompt-mark {
+  display: grid;
+  width: 1.65rem;
+  height: 1.65rem;
+  flex: 0 0 auto;
+  place-items: center;
+  border-radius: 0.35rem;
+  background: color-mix(in oklab, var(--primary) 25%, transparent);
+  color: var(--accent);
+}
+
+.flow-overlay {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.3rem;
+  padding: 0.65rem;
+}
+
+.flow-node {
+  display: flex;
+  align-items: center;
+  gap: 0.38rem;
+  white-space: nowrap;
+  font:
+    9px/1 "JetBrains Mono",
+    monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+
+.flow-dot,
+.layer-chip i {
+  width: 0.45rem;
+  height: 0.45rem;
+  border-radius: 50%;
+  background: var(--primary);
+  box-shadow: 0 0 9px color-mix(in oklab, var(--primary) 75%, transparent);
+}
+
+.flow-dot--image {
+  background: var(--accent);
+  box-shadow: 0 0 9px color-mix(in oklab, var(--accent) 75%, transparent);
+}
+
+.flow-connector {
+  height: 1px;
+  flex: 1;
+  background: linear-gradient(
+    90deg,
+    color-mix(in oklab, var(--primary) 60%, transparent),
+    color-mix(in oklab, var(--accent) 64%, transparent)
+  );
+}
+
+.layer-overlay {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.55rem;
+}
+
+.layer-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border: 1px solid oklch(1 0 0 / 15%);
+  border-radius: 999px;
+  background: oklch(1 0 0 / 5%);
+  padding: 0.35rem 0.5rem;
+  font:
+    8px/1 "JetBrains Mono",
+    monospace;
+  color: oklch(1 0 0 / 78%);
+}
+
+.layer-chip i {
+  width: 0.35rem;
+  height: 0.35rem;
+  background: oklch(0.69 0.12 190);
+  box-shadow: none;
+}
+
+.layer-chip--active {
+  border-color: color-mix(in oklab, var(--accent) 48%, transparent);
+  background: color-mix(in oklab, var(--accent) 12%, transparent);
+  color: var(--accent);
+}
+
+.layer-chip--active i {
+  background: var(--accent);
+}
+
+.feature-copy {
+  padding: 1rem 1rem 1.05rem;
+}
+
+.feature-eyebrow {
+  margin-bottom: 0.4rem;
+  font:
+    8px/1.2 "JetBrains Mono",
+    monospace;
+  letter-spacing: 0.15em;
+  color: var(--muted-foreground);
+}
+
+.feature-copy h3 {
+  font-family: "Syne", sans-serif;
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.feature-description {
+  min-height: 2.6rem;
+  margin-top: 0.35rem;
+  color: var(--muted-foreground);
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.feature-action {
+  margin-top: 0.4rem;
+  height: 2rem;
+  padding-inline: 0;
+  color: var(--foreground);
+  font-size: 10px;
+}
+
+.feature-action svg {
+  color: var(--accent);
+  transition: transform 180ms ease;
+}
+
+.feature-action:hover svg {
+  transform: translate(2px, -2px);
+}
+
+.director-panel {
+  min-width: 0;
+  border-top: 1px solid var(--border);
+  padding-top: 1.6rem;
+}
+
+.inspiration-panel {
+  min-width: 0;
+  align-self: start;
+  border: 1px solid var(--border);
+  border-radius: 0.8rem;
+  background: color-mix(in oklab, var(--card) 82%, transparent);
+  padding: 1rem;
+}
+
+.inspiration-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.65rem;
+}
+
+.inspiration-card {
+  position: relative;
+  min-width: 0;
+  overflow: hidden;
+  aspect-ratio: 0.93;
+  border: 1px solid var(--border);
+  border-radius: 0.55rem;
+  text-align: left;
+  background: var(--muted);
+}
+
+.inspiration-card img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 500ms ease;
+}
+
+.inspiration-card:hover img {
+  transform: scale(1.045);
+}
+
+.inspiration-shade {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(0deg, oklch(0.06 0.01 278 / 92%), transparent 64%);
+}
+
+.inspiration-content {
+  position: absolute;
+  inset: auto 0.7rem 0.65rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.inspiration-content svg {
+  flex: 0 0 auto;
+  color: var(--accent);
+}
+
+.feature-card,
+.inspiration-card,
+.filmstrip-frame,
+.studio-header-tools button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@keyframes cover-drift {
+  from {
+    transform: scale(1.015) translate3d(-0.25%, 0, 0);
+  }
+  to {
+    transform: scale(1.075) translate3d(0.3%, -0.3%, 0);
+  }
+}
+
+@keyframes filmstrip-scan {
+  from {
+    transform: translateX(-24px);
+  }
+  to {
+    transform: translateX(18px);
+  }
+}
+
+@media (max-width: 900px) {
+  .feature-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .feature-card:first-child {
+    grid-column: 1 / -1;
+  }
+
+  .feature-card:first-child .feature-media {
+    aspect-ratio: 2.1;
+  }
+}
+
+@media (max-width: 640px) {
+  .studio-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: auto auto;
+    gap: 0.35rem;
+    padding-inline: 0.55rem;
+  }
+
+  .studio-header-tools {
+    grid-column: 1;
+    grid-row: 2;
+    justify-content: space-between;
+    gap: 0.3rem;
+  }
+
+  .studio-mode-nav {
+    gap: 0;
+  }
+
+  .studio-mode-nav button {
+    min-width: 2.5rem;
+    height: 2.25rem;
+    padding-inline: 0.55rem;
+  }
+
+  .studio-header-tools > button:first-child {
+    min-width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .studio-header-tools > button:nth-last-child(2),
+  .studio-header-tools > button:nth-last-child(3),
+  .studio-header-tools > button:last-child {
+    min-width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .studio-header > div:first-child button {
+    min-width: 2.25rem;
+    height: 2.25rem;
+  }
+
+  .cover-scene {
+    min-height: 620px;
+    height: min(680px, 84svh);
+  }
+
+  .cover-copy {
+    padding-top: 4.2rem;
+    padding-bottom: 2rem;
+  }
+
+  .cover-copy h1 {
+    max-width: 9ch;
+    font-size: clamp(2.7rem, 12vw, 4rem);
+    line-height: 0.98;
+  }
+
+  .cover-shade {
+    background:
+      linear-gradient(90deg, oklch(0.055 0.012 278 / 91%), oklch(0.055 0.012 278 / 48%) 88%),
+      linear-gradient(0deg, oklch(0.08 0.012 278 / 86%) 0%, transparent 54%);
+  }
+
+  .cover-filmstrip {
+    display: flex !important;
+    width: 100%;
+    align-self: stretch;
+    justify-content: space-between;
+    gap: 0.55rem;
+    margin-bottom: 0;
+    padding: 0.55rem;
+  }
+
+  .filmstrip-copy,
+  .filmstrip-time {
+    display: none;
+  }
+
+  .filmstrip-frame {
+    width: clamp(2.15rem, 13vw, 3.1rem);
+  }
+
+  .filmstrip-timeline {
+    width: clamp(3.2rem, 15vw, 4.8rem);
+  }
+
+  .cover-index {
+    top: 0.85rem;
+    right: 0.85rem;
+  }
+
+  .workflow-showcase {
+    padding-top: 2.7rem;
+    padding-bottom: 3rem;
+  }
+
+  .workflow-heading {
+    align-items: start;
+    flex-direction: column;
+    gap: 0.65rem;
+  }
+
+  .feature-grid {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.75rem;
+  }
+
+  .feature-card:first-child {
+    grid-column: auto;
+  }
+
+  .feature-card:first-child .feature-media,
+  .feature-media {
+    aspect-ratio: 1.48;
+  }
+
+  .feature-copy {
+    padding: 0.9rem;
+  }
+
+  .feature-description {
+    min-height: auto;
+    max-width: 42ch;
+  }
+
+  .director-desk {
+    gap: 2rem;
+  }
+
+  .inspiration-panel {
+    padding: 0.8rem;
+  }
+
+  .inspiration-card {
+    aspect-ratio: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cover-photo,
+  .filmstrip-playhead,
+  .cover-heading {
+    animation: none !important;
+  }
+
+  .feature-card,
+  .feature-media > img,
+  .inspiration-card img,
+  .feature-action svg {
+    transition: none !important;
+  }
+
+  .feature-card:hover {
+    transform: none;
+  }
 }
