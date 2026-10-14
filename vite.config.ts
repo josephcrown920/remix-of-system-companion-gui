@@ -7,6 +7,12 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  vite: {
+    // These are loaded only when a chat response uses the feature, not at preview startup.
+    optimizeDeps: {
+      exclude: ["@streamdown/code", "@streamdown/mermaid", "@imgly/background-removal"],
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this
