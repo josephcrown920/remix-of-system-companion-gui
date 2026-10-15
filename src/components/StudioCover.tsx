@@ -1,6 +1,5 @@
 import { ArrowRight, Clapperboard, Film, Images, Plus, ArrowUpRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import fire from "@/assets/reel-fire-portrait.png.asset.json";
 import exposure from "@/assets/reel-double-exposure.jpeg.asset.json";
 import lilies from "@/assets/reel-waterlilies.jpeg.asset.json";
 import hero from "@/assets/hero-triptych.jpg";
