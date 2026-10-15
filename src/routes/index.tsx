@@ -1,3 +1,4 @@
+import { WorkflowStudio } from "@/components/WorkflowStudio";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
@@ -133,7 +134,7 @@ function Editor() {
   const [busy, setBusy] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers">("start");
+  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers" | "workflows">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
   const [vidEngine, setVidEngine] = useState(DEFAULT_VIDEO_ENGINE);
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
@@ -842,6 +843,10 @@ function Editor() {
             >
               Layers
             </Button>
+            <Button variant="ghost" onClick={() => setMode("workflows")}
+              className={cn("rounded-md px-2.5 py-1 transition", mode === "workflows" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>
+              Workflows
+            </Button>
           </div>
           <LipSync onDone={(url) => addAsset(url, "video", "lip-sync.mp4", true)} />
           <Button
@@ -961,6 +966,10 @@ function Editor() {
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
+        </main>
+      ) : mode === "workflows" ? (
+        <main className="flex-1 p-2 sm:p-3">
+          <WorkflowStudio assets={assets} clips={clips} onAsset={addAsset} />
         </main>
       ) : mode === "layers" ? (
         <main className="flex-1 p-2 sm:p-3">
