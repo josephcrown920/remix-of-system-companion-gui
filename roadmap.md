@@ -1,4 +1,6 @@
 # Roadmap
+- [ ] Generate a short Motion release demo and add playback to the landing page — blocked by insufficient workspace AI credits
+- [ ] Generate the five-second first-person Nintendo clip from the uploaded photo, with button presses and an unchanged screen — blocked by insufficient workspace AI credits (1080p request quoted about 3.05 credits)
 - [ ] Restore original Aurora Layers app appearance and full integrated editing workspace
 - [x] Redesign opening screen and creative crew using selected uploaded artwork
 - [x] Add automatically applied browser-saved creative context across agents and generation
