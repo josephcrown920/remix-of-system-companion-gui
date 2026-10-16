@@ -61,6 +61,7 @@ import { LipSync } from "@/components/LipSync";
 import { NodeCanvas } from "@/components/NodeCanvas";
 import { LayerStudio } from "@/components/LayerStudio";
 import { cn } from "@/lib/utils";
+import { Terminal, vfxClass } from "@/components/Terminal";
 import { Button } from "@/components/ui/button";
 import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
 import { StudioCover } from "@/components/StudioCover";
@@ -126,7 +127,8 @@ function Editor() {
   const [playing, setPlaying] = useState(false);
   const [zoom, setZoom] = useState(46);
   const [tool, setTool] = useState<"select" | "razor">("select");
-  const [agent, setAgent] = useState("orchestrator");
+  const [agentState, setAgent] = useState("orchestrator");
+  const agent = agentState;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([GREETING]);
   const [directingStyle, setDirectingStyle] = useState("original");
@@ -646,9 +648,10 @@ function Editor() {
   }
 
   /* ---------- agent ---------- */
-  async function send(text: string) {
+  async function send(text: string, agentOverride?: string) {
     const t = text.trim();
     if (!t || busy) return;
+    const agent = agentOverride ?? agentState;
     setBrief("");
     setMsgs((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
@@ -962,7 +965,7 @@ function Editor() {
               ))}
             </select>
           </div>
-          <CrewBoard crew={crew} busy={busy} />
+          <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
         </StudioCover>
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
@@ -1215,6 +1218,7 @@ function Editor() {
                     {clips.length ? "No clip under the playhead" : "Your canvas is empty"}
                   </p>
                 )}
+                {videoClip && videoClip.filter !== "none" && <div aria-hidden className={vfxClass(videoClip.filter)} />}
                 {audioAsset && (
                   <audio
                     ref={audioRef}
@@ -1431,7 +1435,7 @@ function Editor() {
                     </option>
                   ))}
                 </select>
-                {agent === "orchestrator" && <CrewBoard crew={crew} busy={busy} />}
+                <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
               </>
             ) : selected ? (
               <div className="space-y-3 text-xs">
@@ -1570,7 +1574,7 @@ function Editor() {
                       setSel(target.id);
                       setFxNote(`${p.label} applied to ${target.name}.`);
                     }} className="h-auto flex-col items-stretch overflow-hidden rounded-md border border-border p-0 text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground">
-                      <img src={scene2} alt="" className="h-12 w-full object-cover" style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} />
+                      <span className="relative block h-12 overflow-hidden"><img src={scene2} alt="" className={cn("h-12 w-full object-cover", p.speed && p.speed < 0.3 && "vfx-thumb-slow", p.id === "boomerang" && "vfx-thumb-bounce")} style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} />{p.filter && p.filter !== "none" && <span aria-hidden className={vfxClass(p.filter)} />}</span>
                       <span className="block px-1.5 py-1 font-bold">{p.label}</span>
                     </Button>
                   ))}
