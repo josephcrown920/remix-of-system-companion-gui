@@ -144,6 +144,7 @@ function Editor() {
   const [exportPct, setExportPct] = useState(0);
   const [mediaView, setMediaView] = useState<"media" | "generations">("media");
   const [sideView, setSideView] = useState<"director" | "adjust">("director");
+  const [fxNote, setFxNote] = useState("");
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [sessionName, setSessionName] = useState("Untitled cut");
   const [crew, setCrew] = useState<CrewRun[]>([]);
@@ -725,7 +726,7 @@ function Editor() {
   const audioAsset = audioClip ? assetOf(audioClip.assetId) : null;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col pb-14 lg:pb-0 lg:pl-24 overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
       {/* top bar */}
       <header className="sticky top-0 z-50 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card/75 px-3 py-1.5 backdrop-blur-2xl sm:flex sm:justify-between sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
@@ -797,7 +798,7 @@ function Editor() {
           >
             {voiceOn ? "Voice on" : "Voice off"}
           </Button>
-          <div className="flex rounded-lg border border-border glass-control p-0.5 text-[11px]">
+          <nav aria-label="Studio sections" className="fixed bottom-2 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-xl border border-border glass-panel p-1 text-[11px] shadow-lg lg:bottom-auto lg:left-3 lg:top-1/2 lg:-translate-x-0 lg:-translate-y-1/2 lg:flex-col">
             <Button
               size="sm"
               variant="ghost"
@@ -847,7 +848,7 @@ function Editor() {
               className={cn("rounded-md px-2.5 py-1 transition", mode === "workflows" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>
               Workflows
             </Button>
-          </div>
+          </nav>
           <LipSync onDone={(url) => addAsset(url, "video", "lip-sync.mp4", true)} />
           <Button
             variant="ghost"
@@ -1393,7 +1394,7 @@ function Editor() {
                   sideView === "adjust" ? "bg-primary/20 text-primary" : "text-muted-foreground",
                 )}
               >
-                <Layers3 className="size-3" /> Adjust
+                <Layers3 className="size-3" /> VFX
               </Button>
             </div>
             {sideView === "director" ? (
@@ -1558,9 +1559,24 @@ function Editor() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Select a clip on the timeline to adjust it.
-              </p>
+              <div className="space-y-2 text-xs">
+                <p className="text-[10px] text-muted-foreground">VFX & presets — applies to the clip under the playhead, or your first clip.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRESETS.map((p) => (
+                    <Button variant="ghost" key={p.id} title={p.hint} onClick={() => {
+                      const target = videoClip ?? clips.find((c) => c.track.startsWith("V"));
+                      if (!target) { setFxNote("Add a clip to the timeline first, then pick an effect."); return; }
+                      setClips((cs) => cs.map((c) => c.id === target.id ? { ...c, filter: p.filter ?? c.filter, speed: p.speed ?? c.speed, opacity: p.opacity ?? c.opacity } : c));
+                      setSel(target.id);
+                      setFxNote(`${p.label} applied to ${target.name}.`);
+                    }} className="h-auto flex-col items-stretch overflow-hidden rounded-md border border-border p-0 text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground">
+                      <img src={scene2} alt="" className="h-12 w-full object-cover" style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} />
+                      <span className="block px-1.5 py-1 font-bold">{p.label}</span>
+                    </Button>
+                  ))}
+                </div>
+                {fxNote && <p role="status" className="text-[11px] text-primary">{fxNote}</p>}
+              </div>
             )}
           </section>
         </main>
