@@ -1522,7 +1522,7 @@ function Editor() {
                             ),
                           )
                         }
-                        className="group overflow-hidden rounded-md border border-border text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
+                        className="group h-auto flex-col items-stretch overflow-hidden rounded-md border border-border p-0 text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
                       >
                         <img
                           src={scene2}
