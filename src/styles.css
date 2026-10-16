@@ -165,7 +165,7 @@
   padding-bottom: 90px;
 }
 .cover-title {
-  font-size: 52px;
+  font-size: 40px;
   line-height: 1.12;
   letter-spacing: 0;
 }
@@ -176,7 +176,7 @@
   animation: rise 0.5s ease both;
 }
 @media (max-width: 640px) {
-  .cover-title { font-size: 34px; }
+  .cover-title { font-size: 28px; }
   .cover-intro { min-height: 430px; padding-top: 44px; }
 }
 
@@ -248,7 +248,9 @@ header::before {
 @media (max-width: 640px) {
   .cover-scene { min-height: 430px; height: 56svh; }
   .cover-copy { padding-top: 48px; }
-  .cover-copy h1 { font-size: 42px; }
+  .cover-copy h1 { font-size: 32px; }
   .cover-photo { object-position: 60% 30%; }
   .cover-shade { background: linear-gradient(90deg, oklch(0 0 0 / 88%), oklch(0 0 0 / 40%)), linear-gradient(0deg, var(--background), transparent 35%); }
 }
+
+html { font-size: 14px; }

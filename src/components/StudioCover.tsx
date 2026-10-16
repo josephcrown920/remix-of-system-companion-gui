@@ -31,7 +31,7 @@ export function StudioCover({ children, onWorkspace, onNew, onIdea }: {
         <div className="cover-shade absolute inset-0" />
         <div className="cover-copy relative z-10 mx-auto w-full max-w-7xl px-6 sm:px-12">
           <p className="mb-6 inline-flex items-center gap-2 rounded-full border border-foreground/20 bg-background/40 px-3 py-1.5 font-mono text-[10px] font-bold uppercase tracking-[0.16em] backdrop-blur-xl"><Clapperboard className="size-3.5 text-accent" /> The realistic AI creative studio</p>
-          <h1 className="font-display text-5xl font-bold leading-[0.95] tracking-tight sm:text-7xl">Make AI <span className="text-foreground/50">(</span>Films<span className="text-foreground/50">)</span><br />Look Real.</h1>
+          <h1 className="font-display text-4xl font-bold leading-[0.95] tracking-tight sm:text-5xl">Make AI <span className="text-foreground/50">(</span>Films<span className="text-foreground/50">)</span><br />Look Real.</h1>
           <p className="mt-6 max-w-md text-sm leading-relaxed text-foreground/80">Generate images and video, lip sync, motion control and match cuts — with a whole creative crew in one place.</p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Button onClick={start} className="h-12 rounded-full bg-accent px-6 font-bold uppercase text-accent-foreground hover:bg-accent/90">Start now <ArrowRight className="size-4" /></Button>
@@ -42,7 +42,7 @@ export function StudioCover({ children, onWorkspace, onNew, onIdea }: {
       </section>
       <section className="mx-auto w-full max-w-7xl px-6 pt-12 sm:px-12">
         <p className="font-mono text-[9px] uppercase tracking-[0.3em] text-muted-foreground">Pro tools & models</p>
-        <h2 className="mb-6 mt-2 font-display text-3xl font-bold">Latest releases</h2>
+        <h2 className="mb-6 mt-2 font-display text-2xl font-bold">Latest releases</h2>
         <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
           {releases.map((r) => (
             <Button key={r.title} variant="ghost" onClick={() => { onIdea(r.idea); start(); }} className="group block h-auto overflow-hidden rounded-xl border border-border bg-card/40 p-0 text-left whitespace-normal">
@@ -58,7 +58,7 @@ export function StudioCover({ children, onWorkspace, onNew, onIdea }: {
             <span className="flex items-center gap-2 text-xs font-semibold"><Clapperboard className="size-4 text-accent" /> Director’s desk</span>
             <Button variant="ghost" size="sm" onClick={onNew} className="text-muted-foreground"><Plus className="size-3" /> New chat</Button>
           </div>
-          <h2 className="mb-6 font-display text-3xl font-bold">What’s your next vision?</h2>
+          <h2 className="mb-6 font-display text-2xl font-bold">What’s your next vision?</h2>
           {children}
         </div>
         <aside className="min-w-0">
