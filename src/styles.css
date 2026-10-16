@@ -254,3 +254,21 @@ header::before {
 }
 
 html { font-size: 14px; }
+
+/* Animated VFX overlays layered over the preview and effect thumbnails */
+.vfx-overlay { position: absolute; inset: 0; pointer-events: none; }
+.vfx-glitch { background: repeating-linear-gradient(0deg, oklch(0.7 0.25 330 / 18%) 0 2px, transparent 2px 5px); mix-blend-mode: screen; animation: vfx-glitch 0.9s steps(6) infinite; }
+@keyframes vfx-glitch { 0%,100% { transform: translate(0); clip-path: inset(0 0 0 0); } 20% { transform: translate(-4px,1px); clip-path: inset(20% 0 55% 0); } 40% { transform: translate(5px,-2px); clip-path: inset(60% 0 10% 0); } 60% { transform: translate(-2px,0); clip-path: inset(5% 0 80% 0); } 80% { transform: translate(3px,2px); clip-path: inset(40% 0 30% 0); } }
+.vfx-night-vision { background: radial-gradient(circle, transparent 45%, oklch(0 0 0 / 75%) 100%), repeating-linear-gradient(0deg, oklch(0.8 0.2 145 / 10%) 0 1px, transparent 1px 3px); animation: vfx-flicker 0.15s steps(2) infinite; }
+@keyframes vfx-flicker { 50% { opacity: 0.8; } }
+.vfx-cold { background: radial-gradient(circle, transparent 50%, oklch(0.85 0.08 230 / 45%) 100%); animation: vfx-breathe 3s ease-in-out infinite; }
+@keyframes vfx-breathe { 50% { opacity: 0.6; } }
+.vfx-bullet-time { background: radial-gradient(circle, transparent 35%, oklch(0 0 0 / 55%) 100%), repeating-conic-gradient(from 0deg, oklch(1 0 0 / 6%) 0 2deg, transparent 2deg 9deg); animation: vfx-spin 6s linear infinite; }
+@keyframes vfx-spin { to { transform: rotate(360deg) scale(1.4); } }
+.vfx-bleach { background: oklch(1 0 0 / 0%); animation: vfx-flash 2.4s ease-out infinite; }
+@keyframes vfx-flash { 0%,8% { background: oklch(1 0 0 / 35%); } 30%,100% { background: oklch(1 0 0 / 0%); } }
+.vfx-thumb-slow { animation: vfx-zoom 4s ease-in-out infinite alternate; }
+.vfx-thumb-bounce { animation: vfx-bounce 0.8s ease-in-out infinite alternate; }
+@keyframes vfx-zoom { to { transform: scale(1.15); } }
+@keyframes vfx-bounce { to { transform: scale(1.08) translateX(-4%); } }
+@media (prefers-reduced-motion: reduce) { .vfx-overlay, .vfx-thumb-slow, .vfx-thumb-bounce { animation: none; } }

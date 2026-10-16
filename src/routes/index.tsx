@@ -61,6 +61,7 @@ import { LipSync } from "@/components/LipSync";
 import { NodeCanvas } from "@/components/NodeCanvas";
 import { LayerStudio } from "@/components/LayerStudio";
 import { cn } from "@/lib/utils";
+import { Terminal, vfxClass } from "@/components/Terminal";
 import { Button } from "@/components/ui/button";
 import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
 import { StudioCover } from "@/components/StudioCover";
@@ -126,7 +127,8 @@ function Editor() {
   const [playing, setPlaying] = useState(false);
   const [zoom, setZoom] = useState(46);
   const [tool, setTool] = useState<"select" | "razor">("select");
-  const [agent, setAgent] = useState("orchestrator");
+  const [agentState, setAgent] = useState("orchestrator");
+  const agent = agentState;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([GREETING]);
   const [directingStyle, setDirectingStyle] = useState("original");
@@ -338,8 +340,8 @@ function Editor() {
     });
   }
 
-  async function generateBroll() {
-    const p = brief.trim();
+  async function generateBroll(override?: unknown) {
+    const p = (typeof override === "string" ? override : brief).trim();
     if (!p || genBusy) return;
     setGenBusy(true);
     try {
@@ -378,8 +380,8 @@ function Editor() {
     }
   }
 
-  async function generateClip() {
-    const p = brief.trim();
+  async function generateClip(override?: unknown) {
+    const p = (typeof override === "string" ? override : brief).trim();
     if (!p || genBusy) return;
     setGenBusy(true);
     try {
@@ -646,9 +648,10 @@ function Editor() {
   }
 
   /* ---------- agent ---------- */
-  async function send(text: string) {
+  async function send(text: string, agentOverride?: string) {
     const t = text.trim();
     if (!t || busy) return;
+    const agent = agentOverride ?? agentState;
     setBrief("");
     setMsgs((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
@@ -937,6 +940,24 @@ function Editor() {
         </div>
       )}
 
+      <Terminal
+        busy={busy || genBusy}
+        clipCount={clips.length}
+        onAsk={(id, task) => { setAgent(id); void send(task, id); }}
+        onVfx={(id) => {
+          const pr = PRESETS.find((x) => x.id === id || x.label.toLowerCase().replace(/\s/g, "") === id);
+          if (!pr) return `Unknown effect "${id}". Try: ${PRESETS.map((x) => x.id).join(", ")}`;
+          const target = videoClip ?? clips.find((c) => c.track.startsWith("V"));
+          if (!target) return "No clip on the timeline yet — add media first.";
+          setClips((cs) => cs.map((c) => c.id === target.id ? { ...c, filter: pr.filter ?? c.filter, speed: pr.speed ?? c.speed, opacity: pr.opacity ?? c.opacity } : c));
+          setSel(target.id);
+          return `${pr.label} applied to ${target.name}.`;
+        }}
+        onGenerate={(kind, prompt) => { setMode("edit"); void (kind === "video" ? generateClip(prompt) : generateBroll(prompt)); }}
+        onSplit={() => { const t = videoClip; if (!t) return "No clip under the playhead."; splitAt(t, playhead); return `Split ${t.name} at ${playhead.toFixed(2)}s.`; }}
+        onExport={() => { void exportVideo(); }}
+        onMode={(m) => setMode(m)}
+      />
       {mode === "start" ? (
         <StudioCover
           onWorkspace={() => setMode("edit")}
@@ -962,7 +983,7 @@ function Editor() {
               ))}
             </select>
           </div>
-          <CrewBoard crew={crew} busy={busy} />
+          <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
         </StudioCover>
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
@@ -1215,6 +1236,7 @@ function Editor() {
                     {clips.length ? "No clip under the playhead" : "Your canvas is empty"}
                   </p>
                 )}
+                {videoClip && videoClip.filter !== "none" && <div aria-hidden className={vfxClass(videoClip.filter)} />}
                 {audioAsset && (
                   <audio
                     ref={audioRef}
@@ -1431,7 +1453,7 @@ function Editor() {
                     </option>
                   ))}
                 </select>
-                {agent === "orchestrator" && <CrewBoard crew={crew} busy={busy} />}
+                <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
               </>
             ) : selected ? (
               <div className="space-y-3 text-xs">
@@ -1570,7 +1592,7 @@ function Editor() {
                       setSel(target.id);
                       setFxNote(`${p.label} applied to ${target.name}.`);
                     }} className="h-auto flex-col items-stretch overflow-hidden rounded-md border border-border p-0 text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground">
-                      <img src={scene2} alt="" className="h-12 w-full object-cover" style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} />
+                      <span className="relative block h-12 overflow-hidden"><img src={scene2} alt="" className={cn("h-12 w-full object-cover", p.speed && p.speed < 0.3 && "vfx-thumb-slow", p.id === "boomerang" && "vfx-thumb-bounce")} style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} />{p.filter && p.filter !== "none" && <span aria-hidden className={vfxClass(p.filter)} />}</span>
                       <span className="block px-1.5 py-1 font-bold">{p.label}</span>
                     </Button>
                   ))}
