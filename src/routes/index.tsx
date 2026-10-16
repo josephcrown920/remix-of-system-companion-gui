@@ -727,7 +727,7 @@ function Editor() {
   return (
     <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
       {/* top bar */}
-      <header className="sticky top-0 z-50 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card/75 px-3 py-1.5 backdrop-blur-2xl sm:flex sm:justify-between sm:px-4">
+      <header className="studio-header sticky top-0 z-50 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card/75 px-3 py-1.5 backdrop-blur-2xl sm:flex sm:justify-between sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
           <input
             aria-label="Session name"
@@ -783,7 +783,7 @@ function Editor() {
             AI creative studio
           </span>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="studio-header-tools flex min-w-0 items-center gap-2">
           <Button
             size="sm"
             variant="ghost"
@@ -793,15 +793,17 @@ function Editor() {
               if (voiceOn && typeof window !== "undefined") window.speechSynthesis?.cancel();
               setVoiceOn((v) => !v);
             }}
-            className={cn("h-7 px-2 text-[11px]", voiceOn && "text-primary")}
+            className={cn("h-7 shrink-0 px-2 text-[11px]", voiceOn && "text-primary")}
           >
-            {voiceOn ? "Voice on" : "Voice off"}
+            <Volume2 className="size-3.5 sm:hidden" />
+            <span className="hidden sm:inline">{voiceOn ? "Voice on" : "Voice off"}</span>
           </Button>
-          <div className="flex rounded-lg border border-border glass-control p-0.5 text-[11px]">
+          <nav aria-label="Studio workspace" className="studio-mode-nav flex shrink-0 rounded-lg border border-border glass-control p-0.5 text-[11px]">
             <Button
               size="sm"
               variant="ghost"
               onClick={() => setMode("start")}
+              aria-pressed={mode === "start"}
               className={cn("h-6 px-2", mode === "start" && "bg-primary/20 text-primary")}
             >
               <MessageSquare className="size-3" />
@@ -810,38 +812,44 @@ function Editor() {
             <Button
               variant="ghost"
               onClick={() => setMode("edit")}
+              aria-pressed={mode === "edit"}
               className={cn(
-                "rounded-md px-2.5 py-1 transition",
+                "h-6 rounded-md px-2.5 py-1 transition",
                 mode === "edit"
                   ? "bg-primary/20 text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              Editor
+              <Clapperboard className="size-3 sm:hidden" />
+              <span className="hidden sm:inline">Editor</span>
             </Button>
             <Button
               variant="ghost"
               onClick={() => setMode("canvas")}
+              aria-pressed={mode === "canvas"}
               className={cn(
-                "rounded-md px-2.5 py-1 transition",
+                "h-6 rounded-md px-2.5 py-1 transition",
                 mode === "canvas"
                   ? "bg-primary/20 text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              Canvas
+              <Film className="size-3 sm:hidden" />
+              <span className="hidden sm:inline">Canvas</span>
             </Button>
             <Button
               variant="ghost"
               onClick={() => setMode("layers")}
+              aria-pressed={mode === "layers"}
               className={cn(
-                "rounded-md px-2.5 py-1 transition",
+                "h-6 rounded-md px-2.5 py-1 transition",
                 mode === "layers"
                   ? "bg-primary/20 text-primary shadow-sm"
                   : "text-muted-foreground hover:text-foreground",
               )}
             >
-              Layers
+              <Layers3 className="size-3 sm:hidden" />
+              <span className="hidden sm:inline">Layers</span>
             </Button>
             <Button variant="ghost" onClick={() => setMode("workflows")}
               className={cn("rounded-md px-2.5 py-1 transition", mode === "workflows" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>
@@ -853,22 +861,25 @@ function Editor() {
             variant="ghost"
             onClick={() => { const n = !draftMode; setDraftMode(n); setDraft(n); }}
             title="Draft mode: fast 480p, 4-second previews"
-            className={cn("hidden rounded-md border px-2.5 py-1.5 text-xs font-bold sm:flex", draftMode ? "border-primary text-primary" : "border-border text-muted-foreground")}
+            aria-pressed={draftMode}
+            className={cn("flex h-8 min-w-8 shrink-0 items-center justify-center gap-1.5 rounded-md border px-2 sm:px-2.5 text-xs font-bold", draftMode ? "border-primary text-primary" : "border-border text-muted-foreground")}
           >
-            Draft {draftMode ? "on" : "off"}
+            <Sparkles className="size-3.5" />
+            <span className="hidden sm:inline">Draft {draftMode ? "on" : "off"}</span>
+            <span className="sr-only">Draft mode {draftMode ? "on" : "off"}</span>
           </Button>
           <Button
             variant="ghost"
             onClick={() => void exportVideo()}
             disabled={exporting || !clips.length}
-            className="hidden items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40 sm:flex"
+            className="flex size-8 shrink-0 items-center justify-center gap-1.5 rounded-md bg-primary px-2 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40 sm:h-8 sm:w-auto sm:px-3"
           >
             {exporting ? (
               <Loader2 className="size-3.5 animate-spin" />
             ) : (
               <Download className="size-3.5" />
             )}
-            {exporting ? `${Math.round(exportPct * 100)}%` : "Export"}
+            <span className="hidden sm:inline">{exporting ? `${Math.round(exportPct * 100)}%` : "Export"}</span>
           </Button>
           <Button
             variant="ghost"
@@ -940,6 +951,7 @@ function Editor() {
         <StudioCover
           onWorkspace={() => setMode("edit")}
           onNew={newSession}
+          onMode={setMode}
           onIdea={(idea) => {
             setBrief(idea);
             document.getElementById("creative-start")?.scrollIntoView({ behavior: "smooth" });
