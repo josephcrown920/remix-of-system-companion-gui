@@ -940,6 +940,24 @@ function Editor() {
         </div>
       )}
 
+      <Terminal
+        busy={busy || genBusy}
+        clipCount={clips.length}
+        onAsk={(id, task) => { setAgent(id); void send(task, id); }}
+        onVfx={(id) => {
+          const pr = PRESETS.find((x) => x.id === id || x.label.toLowerCase().replace(/\s/g, "") === id);
+          if (!pr) return `Unknown effect "${id}". Try: ${PRESETS.map((x) => x.id).join(", ")}`;
+          const target = videoClip ?? clips.find((c) => c.track.startsWith("V"));
+          if (!target) return "No clip on the timeline yet — add media first.";
+          setClips((cs) => cs.map((c) => c.id === target.id ? { ...c, filter: pr.filter ?? c.filter, speed: pr.speed ?? c.speed, opacity: pr.opacity ?? c.opacity } : c));
+          setSel(target.id);
+          return `${pr.label} applied to ${target.name}.`;
+        }}
+        onGenerate={(kind, prompt) => { setBrief(prompt); setMode("edit"); setTimeout(() => (kind === "video" ? generateClip : generateBroll)(), 0); }}
+        onSplit={() => { const t = videoClip; if (!t) return "No clip under the playhead."; splitAt(t, playhead); return `Split ${t.name} at ${playhead.toFixed(2)}s.`; }}
+        onExport={() => { void exportVideo(); }}
+        onMode={(m) => setMode(m)}
+      />
       {mode === "start" ? (
         <StudioCover
           onWorkspace={() => setMode("edit")}
