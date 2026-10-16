@@ -269,7 +269,7 @@ export const Route = createFileRoute("/api/agent")({
             : await runOpenAI(agent.model, key, system, user, b.history, undefined, abort.signal);
         }
 
-        if (out.error && out.status !== 403 && !abort.signal.aborted) {
+        if (out.error && (out.status !== 403 || agent.api === "modelark") && !abort.signal.aborted) {
           const fb = await runOpenRouter(system, user, b.history, onText, abort.signal);
           if (fb.text) out = fb;
         }
