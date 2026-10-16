@@ -154,14 +154,19 @@ export function CreativeChat({
         </ConversationContent>
         <ConversationScrollButton />
       </Conversation>
-      <PromptInput onSubmit={() => send(brief)} className="creative-composer">
+      <div className="flex flex-wrap gap-1.5" aria-label="Quick starts">
+        {[["Image", "Generate a photoreal image of "], ["Video", "Generate a 6-second video of "], ["Bullet time", "Freeze the action in a bullet-time orbit around "], ["Match cut", "Match cut my subject through new worlds on every beat: "]].map(([label, text]) => (
+          <Button key={label} type="button" variant="outline" size="sm" className="h-7 rounded-full border-border bg-card/40 px-3 text-[11px]" onClick={() => { setBrief(text!); textarea.current?.focus(); }}>{label}</Button>
+        ))}
+      </div>
+      <PromptInput onSubmit={() => send(brief)} className="creative-composer rounded-2xl border border-border bg-card/60 shadow-lg backdrop-blur-xl focus-within:border-primary/60">
         <PromptInputTextarea
           ref={textarea}
           aria-label="Creative brief"
           value={brief}
           onChange={(e) => setBrief(e.target.value)}
-          placeholder="Tell me what you want to create…"
-          className="min-h-24 text-sm"
+          placeholder="Describe a shot, an edit or a look… (Enter to send)"
+          className="min-h-14 resize-none border-0 bg-transparent text-sm"
         />
         <PromptInputFooter>
           <span className="flex min-w-0 items-center gap-1.5 text-[10px] text-muted-foreground">
