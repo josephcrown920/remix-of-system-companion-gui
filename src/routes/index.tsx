@@ -340,8 +340,8 @@ function Editor() {
     });
   }
 
-  async function generateBroll() {
-    const p = brief.trim();
+  async function generateBroll(override?: unknown) {
+    const p = (typeof override === "string" ? override : brief).trim();
     if (!p || genBusy) return;
     setGenBusy(true);
     try {
@@ -380,8 +380,8 @@ function Editor() {
     }
   }
 
-  async function generateClip() {
-    const p = brief.trim();
+  async function generateClip(override?: unknown) {
+    const p = (typeof override === "string" ? override : brief).trim();
     if (!p || genBusy) return;
     setGenBusy(true);
     try {
@@ -953,7 +953,7 @@ function Editor() {
           setSel(target.id);
           return `${pr.label} applied to ${target.name}.`;
         }}
-        onGenerate={(kind, prompt) => { setBrief(prompt); setMode("edit"); setTimeout(() => (kind === "video" ? generateClip : generateBroll)(), 0); }}
+        onGenerate={(kind, prompt) => { setMode("edit"); void (kind === "video" ? generateClip(prompt) : generateBroll(prompt)); }}
         onSplit={() => { const t = videoClip; if (!t) return "No clip under the playhead."; splitAt(t, playhead); return `Split ${t.name} at ${playhead.toFixed(2)}s.`; }}
         onExport={() => { void exportVideo(); }}
         onMode={(m) => setMode(m)}
