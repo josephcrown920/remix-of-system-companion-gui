@@ -1,4 +1,4 @@
-export type AgentApi = "openai" | "anthropic" | "modelark";
+export type AgentApi = "openai" | "anthropic" | "modelark" | "claude-key";
 
 export type Agent = {
   id: string;
@@ -21,6 +21,7 @@ export const AGENTS: Agent[] = [
   { id: "gemini", name: "Gemini Omni", short: "GM", role: "Rush scanning · b-roll discovery", model: "google/gemini-3.8-flash", api: "openai", available: true, accent: "var(--chart-5)", provider: "Lovable AI" },
   { id: "sonnet", name: "Claude Sonnet", short: "SN", role: "Balanced everyday editing", model: "anthropic/claude-sonnet-5", api: "anthropic", available: true, accent: "var(--chart-2)", provider: "Lovable AI" },
   { id: "luna", name: "GPT-6 Luna", short: "LN", role: "Fast rough cuts · silence trims", model: "openai/gpt-6-luna", api: "openai", available: true, accent: "var(--chart-1)", provider: "Lovable AI" },
+  { id: "claude-own", name: "Claude (your key)", short: "CK", role: "Claude on your own Anthropic key", model: "claude-sonnet-4-5", api: "claude-key", available: true, accent: "var(--chart-2)", provider: "Anthropic" },
   // ModelArk crew — served with your ModelArk key.
   { id: "ark-glm", name: "GLM 5.2", short: "GL", role: "ModelArk · rapid assembly", model: "glm-5-2-260617", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },
   { id: "ark-glm-flash", name: "GLM 5.3 Flash", short: "GF", role: "ModelArk · instant trims", model: "glm-5-3-flash-260828", api: "modelark", available: true, accent: "var(--chart-3)", provider: "ModelArk" },

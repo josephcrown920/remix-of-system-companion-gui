@@ -18,7 +18,7 @@ export const IMAGE_ENGINES: Engine[] = [
   { id: "sunburst", name: "GPT Image 2.5 Sunburst", model: "openai/gpt-image-2.5-sunburst", note: "Photoreal plates & edits", available: true },
   { id: "flare", name: "GPT Image 2.5 Flare", model: "openai/gpt-image-2.5-flare", note: "Faster, lighter plates", available: true },
   { id: "gemini3pro", name: "Gemini 3 Pro Image", model: "google/gemini-3-pro-image", note: "Strong typography & composition", available: true },
-  { id: "gemini31", name: "Gemini 3.1 Flash Image", model: "google/gemini-3.1-flash-image", note: "Fast iteration", available: true },
+  { id: "gemini31", name: "Gemini 3.1 Flash Image", model: "google/gemini-3.1-flash-lite-image", note: "Fast iteration", available: true },
 ];
 
 /** Video engines. Seedance is the requested default but is not served by the gateway. */
@@ -30,11 +30,11 @@ export const VIDEO_ENGINES: Engine[] = [
   { id: "veo31", name: "Veo 3.1", model: "google/veo-3.1", note: "Best motion fidelity", available: true },
   { id: "veo31fast", name: "Veo 3.1 Fast", model: "google/veo-3.1-fast", note: "Quick motion clips", available: true },
   { id: "veo31lite", name: "Veo 3.1 Lite", model: "google/veo-3.1-lite", note: "Cheapest drafts", available: true },
-  { id: "omni", name: "Gemini Omni 1.1", model: "google/gemini-omni-1.1-flash", note: "Image-to-video & continuation", available: true },
+  { id: "omni", name: "Gemini Omni 1.1 Flash", model: "google/gemini-omni-1.1-flash", note: "Image-to-video, editing & continuation up to 4K", available: true },
 ];
 
-export const DEFAULT_IMAGE_ENGINE = "seedream5";
-export const DEFAULT_VIDEO_ENGINE = "seedance2fast";
+export const DEFAULT_IMAGE_ENGINE = "sunburst";
+export const DEFAULT_VIDEO_ENGINE = "omni";
 
 export function engineModel(list: Engine[], id: string) {
   return list.find((e) => e.id === id && e.available)?.model;
@@ -81,6 +81,10 @@ export const FILTERS: Record<string, string> = {
   bleach: "contrast(1.5) saturate(.55) brightness(1.08)",
   dreamy: "blur(.7px) brightness(1.1) saturate(1.25)",
   crimson: "saturate(1.4) hue-rotate(-25deg) contrast(1.1)",
+  "night vision": "grayscale(1) sepia(1) hue-rotate(60deg) saturate(3) brightness(1.15) contrast(1.3)",
+  glitch: "hue-rotate(160deg) saturate(2.2) contrast(1.6)",
+  cold: "saturate(.8) hue-rotate(180deg) brightness(1.05) contrast(1.1)",
+  "bullet time": "contrast(1.25) saturate(1.15) blur(.3px)",
 };
 
 /** One-click effect presets that set several clip properties at once. */
@@ -91,10 +95,16 @@ export const PRESETS: Preset[] = [
   { id: "goldlux", label: "Gold Lux", filter: "gold hour", speed: 1, hint: "Warm luxury glow" },
   { id: "slowmo", label: "Slow motion", speed: 0.5, hint: "Half speed" },
   { id: "doubletime", label: "Double time", speed: 2, hint: "2x speed" },
-  { id: "rampin", label: "Speed ramp", speed: 1.6, filter: "contrast" in FILTERS ? "contrast" : "bleach", hint: "Fast push with punchy contrast" },
+  { id: "rampin", label: "Speed ramp", speed: 1.6, filter: "bleach", hint: "Fast push with punchy contrast" },
   { id: "noir", label: "Noir", filter: "noir", hint: "Black and white, high contrast" },
   { id: "dream", label: "Dream", filter: "dreamy", speed: 0.75, hint: "Soft, floaty look" },
   { id: "ghost", label: "Ghost overlay", opacity: 0.45, filter: "violet dusk", hint: "Semi-transparent overlay" },
   { id: "alarm", label: "Crimson alert", filter: "crimson", speed: 1.15, hint: "Urgent red grade" },
+  { id: "bullettime", label: "Bullet time", filter: "bullet time", speed: 0.2, hint: "Matrix-style ultra slow motion" },
+  { id: "freeze", label: "Freeze frame", speed: 0.05, filter: "bleach", hint: "Near-frozen hold" },
+  { id: "glitch", label: "Glitch", filter: "glitch", speed: 1.25, hint: "Digital glitch colour shift" },
+  { id: "nightvision", label: "Night vision", filter: "night vision", hint: "Green night-vision look" },
+  { id: "cold", label: "Cold FX", filter: "cold", hint: "Icy blue grade" },
+  { id: "boomerang", label: "Boomerang", speed: 1.5, hint: "Quick snappy loop speed" },
   { id: "reset", label: "Reset", filter: "none", speed: 1, opacity: 1, hint: "Back to source" },
 ];

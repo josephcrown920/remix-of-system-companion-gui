@@ -1,3 +1,4 @@
+import { CreativeTools } from "@/components/CreativeTools";
 import { WorkflowStudio } from "@/components/WorkflowStudio";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -61,6 +62,7 @@ import { LipSync } from "@/components/LipSync";
 import { NodeCanvas } from "@/components/NodeCanvas";
 import { LayerStudio } from "@/components/LayerStudio";
 import { cn } from "@/lib/utils";
+import { Terminal, vfxClass } from "@/components/Terminal";
 import { Button } from "@/components/ui/button";
 import { CreativeChat, CrewBoard, DIRECTING_STYLES, type CrewRun } from "@/components/CreativeChat";
 import { StudioCover } from "@/components/StudioCover";
@@ -126,7 +128,8 @@ function Editor() {
   const [playing, setPlaying] = useState(false);
   const [zoom, setZoom] = useState(46);
   const [tool, setTool] = useState<"select" | "razor">("select");
-  const [agent, setAgent] = useState("orchestrator");
+  const [agentState, setAgent] = useState("orchestrator");
+  const agent = agentState;
   const [pickerOpen, setPickerOpen] = useState(false);
   const [msgs, setMsgs] = useState<Msg[]>([GREETING]);
   const [directingStyle, setDirectingStyle] = useState("original");
@@ -134,7 +137,7 @@ function Editor() {
   const [busy, setBusy] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers" | "workflows">("start");
+  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers" | "workflows" | "creative">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
   const [vidEngine, setVidEngine] = useState(DEFAULT_VIDEO_ENGINE);
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
@@ -144,6 +147,7 @@ function Editor() {
   const [exportPct, setExportPct] = useState(0);
   const [mediaView, setMediaView] = useState<"media" | "generations">("media");
   const [sideView, setSideView] = useState<"director" | "adjust">("director");
+  const [fxNote, setFxNote] = useState("");
   const [sessions, setSessions] = useState<SavedSession[]>([]);
   const [sessionName, setSessionName] = useState("Untitled cut");
   const [crew, setCrew] = useState<CrewRun[]>([]);
@@ -337,8 +341,8 @@ function Editor() {
     });
   }
 
-  async function generateBroll() {
-    const p = brief.trim();
+  async function generateBroll(override?: unknown) {
+    const p = (typeof override === "string" ? override : brief).trim();
     if (!p || genBusy) return;
     setGenBusy(true);
     try {
@@ -377,8 +381,8 @@ function Editor() {
     }
   }
 
-  async function generateClip() {
-    const p = brief.trim();
+  async function generateClip(override?: unknown) {
+    const p = (typeof override === "string" ? override : brief).trim();
     if (!p || genBusy) return;
     setGenBusy(true);
     try {
@@ -645,9 +649,10 @@ function Editor() {
   }
 
   /* ---------- agent ---------- */
-  async function send(text: string) {
+  async function send(text: string, agentOverride?: string) {
     const t = text.trim();
     if (!t || busy) return;
+    const agent = agentOverride ?? agentState;
     setBrief("");
     setMsgs((m) => [...m, { role: "user", text: t }]);
     setBusy(true);
@@ -725,7 +730,7 @@ function Editor() {
   const audioAsset = audioClip ? assetOf(audioClip.assetId) : null;
 
   return (
-    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
+    <div className="mx-auto flex min-h-screen w-full max-w-[1800px] flex-col pb-14 lg:pb-0 lg:pl-24 overflow-hidden border-border bg-background/65 font-sans text-foreground backdrop-blur-2xl sm:min-h-[calc(100vh-32px)] sm:rounded-xl sm:border sm:studio-frame lg:my-4">
       {/* top bar */}
       <header className="studio-header sticky top-0 z-50 grid min-h-12 grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-b border-border bg-card/75 px-3 py-1.5 backdrop-blur-2xl sm:flex sm:justify-between sm:px-4">
         <div className="flex min-w-0 items-center gap-2">
@@ -947,6 +952,24 @@ function Editor() {
         </div>
       )}
 
+      <Terminal
+        busy={busy || genBusy}
+        clipCount={clips.length}
+        onAsk={(id, task) => { setAgent(id); void send(task, id); }}
+        onVfx={(id) => {
+          const pr = PRESETS.find((x) => x.id === id || x.label.toLowerCase().replace(/\s/g, "") === id);
+          if (!pr) return `Unknown effect "${id}". Try: ${PRESETS.map((x) => x.id).join(", ")}`;
+          const target = videoClip ?? clips.find((c) => c.track.startsWith("V"));
+          if (!target) return "No clip on the timeline yet — add media first.";
+          setClips((cs) => cs.map((c) => c.id === target.id ? { ...c, filter: pr.filter ?? c.filter, speed: pr.speed ?? c.speed, opacity: pr.opacity ?? c.opacity } : c));
+          setSel(target.id);
+          return `${pr.label} applied to ${target.name}.`;
+        }}
+        onGenerate={(kind, prompt) => { setMode("edit"); void (kind === "video" ? generateClip(prompt) : generateBroll(prompt)); }}
+        onSplit={() => { const t = videoClip; if (!t) return "No clip under the playhead."; splitAt(t, playhead); return `Split ${t.name} at ${playhead.toFixed(2)}s.`; }}
+        onExport={() => { void exportVideo(); }}
+        onMode={(m) => setMode(m)}
+      />
       {mode === "start" ? (
         <StudioCover
           onWorkspace={() => setMode("edit")}
@@ -973,8 +996,10 @@ function Editor() {
               ))}
             </select>
           </div>
-          <CrewBoard crew={crew} busy={busy} />
+          <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
         </StudioCover>
+      ) : mode === "creative" ? (
+        <CreativeTools onAsset={addAsset} onCanvas={() => setMode("canvas")} onLayers={() => setMode("layers")} onWorkflows={() => setMode("workflows")} onAsk={(task) => { setMode("start"); setAgent("orchestrator"); setBrief(task); }} />
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
@@ -1226,6 +1251,7 @@ function Editor() {
                     {clips.length ? "No clip under the playhead" : "Your canvas is empty"}
                   </p>
                 )}
+                {videoClip && videoClip.filter !== "none" && <div aria-hidden className={vfxClass(videoClip.filter)} />}
                 {audioAsset && (
                   <audio
                     ref={audioRef}
@@ -1405,7 +1431,7 @@ function Editor() {
                   sideView === "adjust" ? "bg-primary/20 text-primary" : "text-muted-foreground",
                 )}
               >
-                <Layers3 className="size-3" /> Adjust
+                <Layers3 className="size-3" /> VFX
               </Button>
             </div>
             {sideView === "director" ? (
@@ -1442,7 +1468,7 @@ function Editor() {
                     </option>
                   ))}
                 </select>
-                {agent === "orchestrator" && <CrewBoard crew={crew} busy={busy} />}
+                <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
               </>
             ) : selected ? (
               <div className="space-y-3 text-xs">
@@ -1533,7 +1559,7 @@ function Editor() {
                             ),
                           )
                         }
-                        className="group overflow-hidden rounded-md border border-border text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
+                        className="group h-auto flex-col items-stretch overflow-hidden rounded-md border border-border p-0 text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground"
                       >
                         <img
                           src={scene2}
@@ -1570,9 +1596,24 @@ function Editor() {
                 </div>
               </div>
             ) : (
-              <p className="text-xs text-muted-foreground">
-                Select a clip on the timeline to adjust it.
-              </p>
+              <div className="space-y-2 text-xs">
+                <p className="text-[10px] text-muted-foreground">VFX & presets — applies to the clip under the playhead, or your first clip.</p>
+                <div className="grid grid-cols-2 gap-2">
+                  {PRESETS.map((p) => (
+                    <Button variant="ghost" key={p.id} title={p.hint} onClick={() => {
+                      const target = videoClip ?? clips.find((c) => c.track.startsWith("V"));
+                      if (!target) { setFxNote("Add a clip to the timeline first, then pick an effect."); return; }
+                      setClips((cs) => cs.map((c) => c.id === target.id ? { ...c, filter: p.filter ?? c.filter, speed: p.speed ?? c.speed, opacity: p.opacity ?? c.opacity } : c));
+                      setSel(target.id);
+                      setFxNote(`${p.label} applied to ${target.name}.`);
+                    }} className="h-auto flex-col items-stretch overflow-hidden rounded-md border border-border p-0 text-left text-[10px] text-muted-foreground transition hover:border-primary hover:text-foreground">
+                      <span className="relative block h-12 overflow-hidden"><img src={scene2} alt="" className={cn("h-12 w-full object-cover", p.speed && p.speed < 0.3 && "vfx-thumb-slow", p.id === "boomerang" && "vfx-thumb-bounce")} style={{ filter: FILTERS[p.filter ?? "none"] ?? "none", opacity: p.opacity ?? 1 }} />{p.filter && p.filter !== "none" && <span aria-hidden className={vfxClass(p.filter)} />}</span>
+                      <span className="block px-1.5 py-1 font-bold">{p.label}</span>
+                    </Button>
+                  ))}
+                </div>
+                {fxNote && <p role="status" className="text-[11px] text-primary">{fxNote}</p>}
+              </div>
             )}
           </section>
         </main>

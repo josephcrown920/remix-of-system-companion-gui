@@ -47,7 +47,10 @@ const ORCHESTRATOR_SYSTEM = `${BASE_SYSTEM}
 You are the ORCHESTRATOR: you run a crew of specialist editing agents and answer on their behalf.
 Crew: ${AGENTS.filter((a) => a.available && a.id !== "orchestrator").map((a) => `${a.name} (${a.role})`).join("; ")}.
 Also add a "crew" field: an array of 1-3 short strings naming which specialists you routed this brief to and why, e.g. "Claude Codex — timecode-accurate cuts".
-Begin your steps with the routing decision, then the concrete edits you made.`;
+Begin your steps with the routing decision, then the concrete edits you made.
+
+YOU ARE FULLY AGENTIC. When the brief asks for a video, film, ad, music video, trailer or scene and the media bin lacks the needed shots, write a storyboard and the studio will generate every shot automatically and cut them onto the timeline in order.
+Add a "storyboard" field: an array of 3-8 shots, each {"kind":"video" or "image","prompt":"full visual prompt with subject, setting, lighting, lens, framing (wide/medium/close-up) and camera move","dur":4}. Keep the subject, wardrobe and style consistent across shots. Do not ask questions first unless the brief is completely empty — make confident creative choices.`;
 
 const SPECIALIST_BRIEFS = [
   { id: "astra", task: "Direct pacing, visual structure, and the overall creative arc." },
@@ -65,17 +68,23 @@ function arkMessage(raw: string) {
 
 function extractJson(text: string) {
   const m = text.match(/\{[\s\S]*\}/);
-  if (!m) return { reply: text.slice(0, 400), steps: [], actions: [], crew: [] };
+  if (!m) return { reply: text.slice(0, 400), steps: [], actions: [], crew: [], storyboard: [] };
   try {
     const p = JSON.parse(m[0]) as Record<string, unknown>;
+    const board = Array.isArray(p["storyboard"]) ? (p["storyboard"] as Record<string, unknown>[]) : [];
     return {
       reply: typeof p["reply"] === "string" ? p["reply"] : "Done.",
       steps: Array.isArray(p["steps"]) ? (p["steps"] as string[]).slice(0, 12) : [],
       actions: Array.isArray(p["actions"]) ? p["actions"] : [],
       crew: Array.isArray(p["crew"]) ? (p["crew"] as string[]).slice(0, 4) : [],
+      storyboard: board.filter((s) => typeof s["prompt"] === "string").slice(0, 8).map((s) => ({
+        kind: s["kind"] === "image" ? "image" : "video",
+        prompt: String(s["prompt"]).slice(0, 2000),
+        dur: Math.min(10, Math.max(2, Number(s["dur"]) || 4)),
+      })),
     };
   } catch {
-    return { reply: text.slice(0, 400), steps: [], actions: [], crew: [] };
+    return { reply: text.slice(0, 400), steps: [], actions: [], crew: [], storyboard: [] };
   }
 }
 
@@ -161,6 +170,39 @@ async function runAnthropic(model: string, key: string, system: string, user: st
   return { text };
 }
 
+async function runChatCompat(url: string, headers: Record<string, string>, model: string, system: string, user: string, history: Body["history"], onText?: (text: string) => void, signal?: AbortSignal) {
+  const messages = [{ role: "system", content: system }, ...(history ?? []).slice(-8).map((h) => ({ role: h.role, content: h.text })), { role: "user", content: user }];
+  const res = await fetch(url, { method: "POST", signal: signal ?? null, headers: { ...headers, "Content-Type": "application/json" }, body: JSON.stringify({ model, messages, stream: true }) });
+  if (!res.ok || !res.body) return { error: await res.text(), status: res.status };
+  let text = "";
+  await readSse(res.body, (_e, data) => {
+    if (data === "[DONE]" || data.startsWith(":")) return;
+    try { const d = (JSON.parse(data) as { choices?: { delta?: { content?: string } }[] }).choices?.[0]?.delta?.content; if (d) { text += d; onText?.(text); } } catch { /* skip */ }
+  });
+  return text ? { text } : { error: "Empty reply", status: 502 };
+}
+
+/** OpenRouter free router — used as a fallback when the main provider fails. */
+async function runOpenRouter(system: string, user: string, history: Body["history"], onText?: (text: string) => void, signal?: AbortSignal) {
+  const key = process.env["OPENROUTER_API_KEY"];
+  if (!key) return { error: "OpenRouter not configured", status: 401 };
+  return runChatCompat("https://openrouter.ai/api/v1/chat/completions", { Authorization: `Bearer ${key}`, "X-Title": "REEL Studio" }, "openrouter/free", system, user, history, onText, signal);
+}
+
+/** Claude on the user's own Anthropic key. */
+async function runClaudeKey(model: string, system: string, user: string, history: Body["history"], onText?: (text: string) => void, signal?: AbortSignal) {
+  const key = process.env["ANTHROPIC_API_KEY"];
+  if (!key) return { error: "Anthropic key not configured", status: 401 };
+  const messages = [...(history ?? []).slice(-8).map((h) => ({ role: h.role, content: h.text })), { role: "user" as const, content: user }];
+  const res = await fetch("https://api.anthropic.com/v1/messages", { method: "POST", signal: signal ?? null, headers: { "x-api-key": key, "anthropic-version": "2023-06-01", "Content-Type": "application/json" }, body: JSON.stringify({ model, max_tokens: 6000, system, messages, stream: true }) });
+  if (!res.ok || !res.body) return { error: await res.text(), status: res.status };
+  let text = "";
+  await readSse(res.body, (_e, data) => {
+    try { const f = JSON.parse(data) as { type?: string; delta?: { type?: string; text?: string } }; if (f.type === "content_block_delta" && f.delta?.type === "text_delta") { text += f.delta.text ?? ""; onText?.(text); } } catch { /* skip */ }
+  });
+  return text ? { text } : { error: "Empty reply", status: 502 };
+}
+
 export const Route = createFileRoute("/api/agent")({
   server: {
     handlers: {
@@ -227,6 +269,8 @@ export const Route = createFileRoute("/api/agent")({
           }
         } else if (agent.api === "modelark") {
           out = await runModelArk(agent.model, system, user, b.history, onText, abort.signal);
+        } else if (agent.api === "claude-key") {
+          out = await runClaudeKey(agent.model, system, user, b.history, onText, abort.signal);
         } else {
           const key = apiKey();
           out = agent.api === "anthropic"
@@ -234,6 +278,10 @@ export const Route = createFileRoute("/api/agent")({
             : await runOpenAI(agent.model, key, system, user, b.history, undefined, abort.signal);
         }
 
+        if (out.error && (out.status !== 403 || agent.api === "modelark") && !abort.signal.aborted) {
+          const fb = await runOpenRouter(system, user, b.history, onText, abort.signal);
+          if (fb.text) out = fb;
+        }
         if (out.error) {
           const status = out.status ?? 500;
           const msg =

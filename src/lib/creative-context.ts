@@ -1,4 +1,5 @@
 const KEY = "reel-creative-context";
+const STYLE = "reel-moodboard";
 
 export function readCreativeContext(): string {
   if (typeof window === "undefined") return "";
@@ -11,5 +12,8 @@ export function saveCreativeContext(value: string) {
 
 export function withCreativeContext(prompt: string): string {
   const context = readCreativeContext().trim();
-  return context ? `${prompt}\n\nCREATIVE CONTEXT (reference preferences; the current request takes priority):\n${context}` : prompt;
+  let style = "";
+  try { style = window.localStorage.getItem(STYLE) ?? ""; } catch { /* Storage may be unavailable. */ }
+  const withContext = context ? `${prompt}\n\nCREATIVE CONTEXT (reference preferences; the current request takes priority):\n${context}` : prompt;
+  return style ? `${withContext}\n\n${style}` : withContext;
 }

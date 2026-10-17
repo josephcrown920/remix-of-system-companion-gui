@@ -16,3 +16,6 @@
 - Keep agent replies on the existing TanStack API route and forward streamed provider output as SSE; this preserves the HTTP boundary while enabling live updates and cancellation.
 - Apply browser-saved creative context through one shared prompt helper for chat and all generation surfaces; current instructions take precedence over saved preferences.
 - Load background segmentation only on a browser user action and retain its transparent PNG as a data URL; this avoids server-native dependencies and preserves cutouts in saved sessions.
+- Keep imported ComfyUI API graphs separate from native canvas documents and execute only after user-selected server validation; this preserves custom nodes without silently replacing providers.
+- Keep moodboard selection in shared creative-context composition so every generation surface receives the same saved style without overriding current instructions.
+- Native Genjutsu processing and Blender rendering stay on the user's external runtime; browser controls must never present generic image-to-video generation as verified source motion transfer.
