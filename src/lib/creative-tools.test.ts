@@ -4,7 +4,7 @@ import { parseComfyWorkflow, missingComfyNodes, prepareComfyWorkflow, normalizeC
 import workflow from "../data/krea-style-workflow.json";
 test("uploaded Krea graph preserves both style-reference inputs", () => {
   const graph = parseComfyWorkflow(workflow);
-  assert.deepEqual(graph["7"]?.inputs.style_reference, ["8", 0]);
+  assert.deepEqual(graph["7"]?.inputs["style_reference"], ["8", 0]);
   assert.deepEqual(graph["1"]?.inputs["model.style_reference"], ["7", 0]);
 });
 test("missing Krea custom nodes block execution rather than substitute models", () => {
@@ -13,9 +13,9 @@ test("missing Krea custom nodes block execution rather than substitute models", 
 test("reference uploads are mapped without mutating the imported graph", () => {
   const graph = parseComfyWorkflow(workflow);
   const copy = prepareComfyWorkflow(graph, "new shot", { "11": "uploaded.png" });
-  assert.equal(copy["11"]?.inputs.image, "uploaded.png");
-  assert.equal(graph["11"]?.inputs.image, "krea_style_reference_image1.png");
-  assert.equal(copy["1"]?.inputs.prompt, "new shot");
+  assert.equal(copy["11"]?.inputs["image"], "uploaded.png");
+  assert.equal(graph["11"]?.inputs["image"], "krea_style_reference_image1.png");
+  assert.equal(copy["1"]?.inputs["prompt"], "new shot");
 });
 test("server addresses never accept embedded credentials", () => {
   assert.throws(() => normalizeComfyUrl("https://secret@example.com"));

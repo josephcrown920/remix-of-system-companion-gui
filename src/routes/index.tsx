@@ -1,3 +1,4 @@
+import { CreativeTools } from "@/components/CreativeTools";
 import { WorkflowStudio } from "@/components/WorkflowStudio";
 import { createFileRoute } from "@tanstack/react-router";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
@@ -136,7 +137,7 @@ function Editor() {
   const [busy, setBusy] = useState(false);
   const [voiceOn, setVoiceOn] = useState(false);
   const [genBusy, setGenBusy] = useState(false);
-  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers" | "workflows">("start");
+  const [mode, setMode] = useState<"start" | "edit" | "canvas" | "layers" | "workflows" | "creative">("start");
   const [imgEngine, setImgEngine] = useState(DEFAULT_IMAGE_ENGINE);
   const [vidEngine, setVidEngine] = useState(DEFAULT_VIDEO_ENGINE);
   const [motion, setMotion] = useState<Motion>(DEFAULT_MOTION);
@@ -851,6 +852,7 @@ function Editor() {
               className={cn("rounded-md px-2.5 py-1 transition", mode === "workflows" ? "bg-primary/20 text-primary shadow-sm" : "text-muted-foreground hover:text-foreground")}>
               Workflows
             </Button>
+            <Button variant="ghost" onClick={() => setMode("creative")} className={cn("rounded-md px-2.5 py-1 transition", mode === "creative" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Sparkles className="size-3" /><span className="hidden sm:inline">Creative lab</span></Button>
           </nav>
           <LipSync onDone={(url) => addAsset(url, "video", "lip-sync.mp4", true)} />
           <Button
@@ -985,6 +987,8 @@ function Editor() {
           </div>
           <CrewBoard crew={crew} busy={busy} onAsk={(id, task) => { setAgent(id); void send(task, id); }} />
         </StudioCover>
+      ) : mode === "creative" ? (
+        <CreativeTools onAsset={addAsset} onCanvas={() => setMode("canvas")} onLayers={() => setMode("layers")} onWorkflows={() => setMode("workflows")} onAsk={(task) => { setMode("start"); setAgent("orchestrator"); setBrief(task); }} />
       ) : mode === "canvas" ? (
         <main className="flex-1 p-2 sm:p-3">
           <NodeCanvas motion={motion} onAsset={addAsset} />
