@@ -1,9 +1,10 @@
 # Roadmap
-- [ ] Add uploaded Krea moodboards and shared generation style selection
-- [ ] Add imported Krea/ComfyUI workflow with connection, reference uploads, queue status, and timeline handoff
+- [x] Add uploaded Krea moodboards and shared generation style selection
+- [x] Add imported Krea/ComfyUI workflow with connection, reference uploads, queue status, and timeline handoff
+- [ ] Verify external ComfyUI rendering — blocked until a compatible user server is connected
 - [ ] Add node templates, workflow import/export, undo/redo, and keyboard controls from the supplied references
-- [ ] Add motion-reference workspace and expose provider-dependent Krea tools honestly
-- [ ] Incorporate the updated Genjutsu source workflow and correct unsupported source-swap claims
+- [x] Add motion-reference workspace and expose provider-dependent Krea tools honestly
+- [x] Incorporate the updated Genjutsu source workflow and correct unsupported source-swap claims
 - [ ] Restore original Aurora Layers app appearance and full integrated editing workspace
 - [x] Redesign opening screen and creative crew using selected uploaded artwork
 - [x] Add automatically applied browser-saved creative context across agents and generation
