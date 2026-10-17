@@ -22,3 +22,17 @@ test("server addresses never accept embedded credentials", () => {
   assert.equal(normalizeComfyUrl("https://example.com/"), "https://example.com");
 });
 test("no selected moodboard leaves the prompt unchanged", () => { assert.equal(stylePrompt("a portrait", null), "a portrait"); });
+test("ComfyUI imports reject array inputs and canvas exports", () => {
+  assert.throws(() => parseComfyWorkflow({ nodes: [], links: [] }));
+  assert.throws(() => parseComfyWorkflow({ "1": { class_type: "LoadImage", inputs: [] } }));
+});
+test("ComfyUI addresses reject unsafe schemes and credential query strings", () => {
+  assert.throws(() => normalizeComfyUrl("javascript:alert(1)"));
+  assert.throws(() => normalizeComfyUrl("https://example.com?token=secret"));
+});
+test("selected style stays subordinate to current instructions", () => {
+  const prompt = stylePrompt("Keep the outfit red", { profile: "Vintage Pop", keywords: ["halftone"] }, 0.65);
+  assert.ok(prompt.startsWith("Keep the outfit red"));
+  assert.ok(prompt.includes("current instructions take priority"));
+  assert.ok(prompt.includes("strength 65%"));
+});

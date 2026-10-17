@@ -802,6 +802,45 @@ function Editor() {
           >
             {voiceOn ? "Voice on" : "Voice off"}
           </Button>
+
+          <LipSync onDone={(url) => addAsset(url, "video", "lip-sync.mp4", true)} />
+          <Button
+            variant="ghost"
+            onClick={() => { const n = !draftMode; setDraftMode(n); setDraft(n); }}
+            title="Draft mode: fast 480p, 4-second previews"
+            className={cn("hidden rounded-md border px-2.5 py-1.5 text-xs font-bold sm:flex", draftMode ? "border-primary text-primary" : "border-border text-muted-foreground")}
+          >
+            Draft {draftMode ? "on" : "off"}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => void exportVideo()}
+            disabled={exporting || !clips.length}
+            className="hidden items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40 sm:flex"
+          >
+            {exporting ? (
+              <Loader2 className="size-3.5 animate-spin" />
+            ) : (
+              <Download className="size-3.5" />
+            )}
+            {exporting ? `${Math.round(exportPct * 100)}%` : "Export"}
+          </Button>
+          <Button
+            variant="ghost"
+            onClick={() => setPickerOpen((o) => !o)}
+            className="flex items-center gap-2 rounded-md border border-border glass-control px-2.5 py-1.5 text-xs transition hover:border-primary"
+          >
+            <span
+              className="grid size-5 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground"
+              style={{ background: active.accent }}
+            >
+              {active.short}
+            </span>
+            <span className="hidden font-medium sm:inline">{active.name}</span>
+            <Sparkles className="size-3 text-muted-foreground" />
+          </Button>
+        </div>
+      </header>
           <nav aria-label="Studio sections" className="fixed bottom-2 left-1/2 z-50 flex -translate-x-1/2 gap-0.5 rounded-xl border border-border glass-panel p-1 text-[11px] shadow-lg lg:bottom-auto lg:left-3 lg:top-1/2 lg:-translate-x-0 lg:-translate-y-1/2 lg:flex-col">
             <Button
               size="sm"
@@ -854,44 +893,6 @@ function Editor() {
             </Button>
             <Button variant="ghost" onClick={() => setMode("creative")} className={cn("rounded-md px-2.5 py-1 transition", mode === "creative" ? "bg-primary/20 text-primary" : "text-muted-foreground")}><Sparkles className="size-3" /><span className="hidden sm:inline">Creative lab</span></Button>
           </nav>
-          <LipSync onDone={(url) => addAsset(url, "video", "lip-sync.mp4", true)} />
-          <Button
-            variant="ghost"
-            onClick={() => { const n = !draftMode; setDraftMode(n); setDraft(n); }}
-            title="Draft mode: fast 480p, 4-second previews"
-            className={cn("hidden rounded-md border px-2.5 py-1.5 text-xs font-bold sm:flex", draftMode ? "border-primary text-primary" : "border-border text-muted-foreground")}
-          >
-            Draft {draftMode ? "on" : "off"}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => void exportVideo()}
-            disabled={exporting || !clips.length}
-            className="hidden items-center gap-1.5 rounded-md bg-primary px-3 py-1.5 text-xs font-bold text-primary-foreground transition hover:bg-accent disabled:opacity-40 sm:flex"
-          >
-            {exporting ? (
-              <Loader2 className="size-3.5 animate-spin" />
-            ) : (
-              <Download className="size-3.5" />
-            )}
-            {exporting ? `${Math.round(exportPct * 100)}%` : "Export"}
-          </Button>
-          <Button
-            variant="ghost"
-            onClick={() => setPickerOpen((o) => !o)}
-            className="flex items-center gap-2 rounded-md border border-border glass-control px-2.5 py-1.5 text-xs transition hover:border-primary"
-          >
-            <span
-              className="grid size-5 place-items-center rounded-full font-mono text-[9px] font-bold text-primary-foreground"
-              style={{ background: active.accent }}
-            >
-              {active.short}
-            </span>
-            <span className="hidden font-medium sm:inline">{active.name}</span>
-            <Sparkles className="size-3 text-muted-foreground" />
-          </Button>
-        </div>
-      </header>
 
       {pickerOpen && (
         <div className="animate-rise border-b border-border glass-panel p-3">
