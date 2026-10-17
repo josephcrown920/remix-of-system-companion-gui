@@ -55,11 +55,12 @@ export async function generateVideo(
   prompt: string,
   engine: string,
   motion: string,
-  opts: { image?: Blob | undefined; audio?: Blob | undefined; duration?: string; onStatus?: (s: string) => void } = {},
+  opts: { image?: Blob | undefined; video?: Blob | undefined; audio?: Blob | undefined; duration?: string; onStatus?: (s: string) => void } = {},
 ): Promise<string> {
   const draft = isDraftMode();
   const body: Record<string, unknown> = { prompt: withCreativeContext(prompt), engine, motion, duration: draft ? "4s" : opts.duration ?? "6s", draft };
   if (opts.image) body["image"] = await fileToMedia(opts.image);
+  if (opts.video) body["video"] = await fileToMedia(opts.video);
   if (opts.audio) body["audio"] = await fileToMedia(opts.audio);
   const r = await fetch("/api/video", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
   const job = (await r.json().catch(() => ({}))) as { id?: string; status?: string };

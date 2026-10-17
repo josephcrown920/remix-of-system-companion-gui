@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { generateVideo } from "@/lib/generate";
 import { DEFAULT_VIDEO_ENGINE, VIDEO_ENGINES } from "@/lib/engines";
 import type { EditorAsset, EditorClip } from "@/lib/editor-state";
+import genjutsuPackage from "@/assets/genjutsu-source-workflow.asset.json";
 
 type Props = {
   assets: EditorAsset[];
@@ -56,7 +57,8 @@ function Genjutsu({ onAsset }: { onAsset: Props["onAsset"] }) {
   return (
     <div className="grid flex-1 gap-3 md:grid-cols-2">
       <div className="flex flex-col gap-2 text-xs">
-        <p className="text-muted-foreground">Your scene, new characters. Draft first, approve before HD. The original audio is kept on the timeline.</p>
+        <p className="text-muted-foreground">Create a character-reference draft, then approve HD. Exact source subject replacement, mask review and original-audio restoration run in the downloadable Genjutsu workflow.</p>
+        <a href={genjutsuPackage.url} download="genjutsu-source-workflow.zip" className="font-bold text-primary">Download updated Genjutsu workflow</a>
         <label className="font-bold">1. Source video
           <input type="file" accept="video/*" className="mt-1 block w-full" onChange={(e) => { setSource(e.target.files?.[0] ?? null); setApproved(false); }} />
         </label>
@@ -72,7 +74,7 @@ function Genjutsu({ onAsset }: { onAsset: Props["onAsset"] }) {
             {VIDEO_ENGINES.map((v) => <option key={v.id} value={v.id}>{v.name}</option>)}
           </select>
         </label>
-        <label className="flex items-center gap-2"><input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />I reviewed the full clip and subject area</label>
+        <label className="flex items-center gap-2"><input type="checkbox" checked={approved} onChange={(e) => setApproved(e.target.checked)} />I understand this draft uses the character reference, not exact source replacement</label>
         <div className="flex gap-2">
           <Button size="sm" disabled={busy || !approved} onClick={() => run(false)}>Create draft</Button>
           <Button size="sm" variant="outline" disabled={busy || !draftUrl} onClick={() => run(true)}>Approve HD</Button>

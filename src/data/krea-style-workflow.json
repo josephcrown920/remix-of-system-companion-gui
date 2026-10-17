@@ -1,0 +1,83 @@
+{
+  "1": {
+    "inputs": {
+      "prompt": "90s spaghetti western movie still, lone cowboy silhouette from behind, standing in a vast desert canyon, wearing a wide-brimmed hat, long duster coat and bandana, holding a revolver at his side, saguaro cacti in the foreground, hazy orange dust storm atmosphere, warm sepia and burnt sienna color palette, golden hour sunset light, soft atmospheric haze, vintage film grain, cinematic wide shot, dramatic composition, gritty old west aesthetic, hyperrealistic textures",
+      "model": "Krea 2 Medium",
+      "model.aspect_ratio": "1:1",
+      "model.resolution": "1K",
+      "model.creativity": "medium",
+      "model.moodboard_id": "",
+      "model.moodboard_strength": 0.35,
+      "seed": 593877138,
+      "model.style_reference": [
+        "7",
+        0
+      ]
+    },
+    "class_type": "Krea2ImageNode",
+    "_meta": {
+      "title": "Krea 2 Image"
+    }
+  },
+  "2": {
+    "inputs": {
+      "filename_prefix": "Krea2",
+      "images": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "SaveImage",
+    "_meta": {
+      "title": "Save Image"
+    }
+  },
+  "7": {
+    "inputs": {
+      "strength": 1,
+      "image": [
+        "11",
+        0
+      ],
+      "style_reference": [
+        "8",
+        0
+      ]
+    },
+    "class_type": "Krea2StyleReferenceNode",
+    "_meta": {
+      "title": "Krea 2 Style Reference"
+    }
+  },
+  "8": {
+    "inputs": {
+      "strength": 1,
+      "image": [
+        "12",
+        0
+      ]
+    },
+    "class_type": "Krea2StyleReferenceNode",
+    "_meta": {
+      "title": "Krea 2 Style Reference"
+    }
+  },
+  "11": {
+    "inputs": {
+      "image": "krea_style_reference_image1.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  },
+  "12": {
+    "inputs": {
+      "image": "krea_style_reference_image2.png"
+    },
+    "class_type": "LoadImage",
+    "_meta": {
+      "title": "Load Image"
+    }
+  }
+}
