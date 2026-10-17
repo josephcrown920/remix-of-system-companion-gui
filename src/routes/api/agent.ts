@@ -47,7 +47,10 @@ const ORCHESTRATOR_SYSTEM = `${BASE_SYSTEM}
 You are the ORCHESTRATOR: you run a crew of specialist editing agents and answer on their behalf.
 Crew: ${AGENTS.filter((a) => a.available && a.id !== "orchestrator").map((a) => `${a.name} (${a.role})`).join("; ")}.
 Also add a "crew" field: an array of 1-3 short strings naming which specialists you routed this brief to and why, e.g. "Claude Codex — timecode-accurate cuts".
-Begin your steps with the routing decision, then the concrete edits you made.`;
+Begin your steps with the routing decision, then the concrete edits you made.
+
+YOU ARE FULLY AGENTIC. When the brief asks for a video, film, ad, music video, trailer or scene and the media bin lacks the needed shots, write a storyboard and the studio will generate every shot automatically and cut them onto the timeline in order.
+Add a "storyboard" field: an array of 3-8 shots, each {"kind":"video" or "image","prompt":"full visual prompt with subject, setting, lighting, lens, framing (wide/medium/close-up) and camera move","dur":4}. Keep the subject, wardrobe and style consistent across shots. Do not ask questions first unless the brief is completely empty — make confident creative choices.`;
 
 const SPECIALIST_BRIEFS = [
   { id: "astra", task: "Direct pacing, visual structure, and the overall creative arc." },
@@ -65,17 +68,23 @@ function arkMessage(raw: string) {
 
 function extractJson(text: string) {
   const m = text.match(/\{[\s\S]*\}/);
-  if (!m) return { reply: text.slice(0, 400), steps: [], actions: [], crew: [] };
+  if (!m) return { reply: text.slice(0, 400), steps: [], actions: [], crew: [], storyboard: [] };
   try {
     const p = JSON.parse(m[0]) as Record<string, unknown>;
+    const board = Array.isArray(p["storyboard"]) ? (p["storyboard"] as Record<string, unknown>[]) : [];
     return {
       reply: typeof p["reply"] === "string" ? p["reply"] : "Done.",
       steps: Array.isArray(p["steps"]) ? (p["steps"] as string[]).slice(0, 12) : [],
       actions: Array.isArray(p["actions"]) ? p["actions"] : [],
       crew: Array.isArray(p["crew"]) ? (p["crew"] as string[]).slice(0, 4) : [],
+      storyboard: board.filter((s) => typeof s["prompt"] === "string").slice(0, 8).map((s) => ({
+        kind: s["kind"] === "image" ? "image" : "video",
+        prompt: String(s["prompt"]).slice(0, 2000),
+        dur: Math.min(10, Math.max(2, Number(s["dur"]) || 4)),
+      })),
     };
   } catch {
-    return { reply: text.slice(0, 400), steps: [], actions: [], crew: [] };
+    return { reply: text.slice(0, 400), steps: [], actions: [], crew: [], storyboard: [] };
   }
 }
 
